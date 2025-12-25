@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>현대자동차 CCR 근무표</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: #f5f5f5;
+        }
+
+        /* 모바일 반응형 (화면 너비 768px 이하) */
+        @media screen and (max-width: 768px) {
+            .calendar-grid {
+                grid-template-columns: repeat(7, 1fr) !important;
+                font-size: 10px !important;
+            }
+
+            .calendar-day {
+                min-height: 80px !important;
+                padding: 2px !important;
+                font-size: 9px !important;
+            }
+
+            .calendar-day .text-lg {
+                font-size: 12px !important;
+            }
+
+            .day-worker-info {
+                font-size: 8px !important;
+            }
+
+            .night-c-info {
+                font-size: 7px !important;
+            }
+
+            .header-controls {
+                flex-direction: column !important;
+                gap: 8px !important;
+            }
+
+            .no-print button,
+            .no-print select,
+            .no-print input {
+                font-size: 12px !important;
+                padding: 6px 10px !important;
+            }
+
+            h1 {
+                font-size: 16px !important;
+            }
+
+            .print-title {
+                font-size: 14px !important;
+            }
+
+            /* 메모 영역 축소 */
+            textarea {
+                font-size: 12px !important;
+                min-height: 60px !important;
+            }
+        }
+
+        /* 더 작은 화면 (400px 이하) */
+        @media screen and (max-width: 400px) {
+            .calendar-day {
+                min-height: 60px !important;
+                font-size: 7px !important;
+            }
+
+            .calendar-day .text-lg {
+                font-size: 10px !important;
+            }
+
+            .day-worker-info,
+            .night-c-info {
+                font-size: 6px !important;
+            }
+        }
+
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 0;
+            }
+
+            body {
+                background: white;
+            }
+
+            #print-area {
+                zoom: 0.62 !important;
+                width: 100% !important;
+                height: 100% !important;
+                margin: 0 !important;
+                padding: 8px !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .print-only {
+                display: block !important;
+            }
+
+            .calendar-container {
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+            }
+
+            .calendar-day {
+                min-height: 155px !important;
+                height: auto !important;
+                padding: 4px 3px !important;
+                font-size: 10px !important;
+                /* Base shrink */
+            }
+
+            .day-worker-info {
+                font-size: 10.5px !important;
+            }
+
+            .night-c-info {
+                font-size: 10px !important;
+            }
+
+            .print-title {
+                padding-top: 3px !important;
+                padding-bottom: 3px !important;
+                margin-bottom: 3px !important;
+                font-size: 20px !important;
+                /* Slightly smaller */
+                border-bottom: 1px solid #003D82 !important;
+            }
+
+            .memo-area {
+                margin-top: 5px !important;
+                padding: 5px !important;
+            }
+
+            .memo-area textarea {
+                border: 1px solid #eee !important;
+                height: auto !important;
+                min-height: 40px !important;
+                font-size: 10px !important;
+            }
+        }
+
+        .print-only-title {
+            display: none;
+        }
+
+        @media print {
+            .print-only-title {
+                display: block !important;
+            }
+        }
+
+        /* Toast Animation */
+        @keyframes slideUp {
+            from {
+                transform: translate(-50%, 100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+        }
+
+        .animate-toast {
+            animation: slideUp 0.3s ease-out;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+
+        const TEAMS = {
+            '컨베어': ['호빈', '민성', '동인', '선우', '윤수'],
+            '로보트': ['광수', '영빈', '서용', '찬우', '성광'],
+            '주설비': ['우용', '재령', '민혁', '이진', '성운', '승현']
+        };
+
+        const NIGHT_TEAMS = {
+            'A팀': ['민성', '광수', '이진'],
+            'B팀': ['호빈', '찬우', '성운'],
+            'C팀': ['선우', '서용', '우용'],
+            'D팀': ['동인', '영빈', '민혁'],
+            'E팀': ['윤수', '성광', '재령']
+        };
+
+        function App() {
+            // LocalStorage에서 초기값 로드
+            const loadFromStorage = (key, defaultValue) => {
+                try {
+                    const saved = localStorage.getItem(key);
+                    return saved ? JSON.parse(saved) : defaultValue;
+                } catch {
+                    return defaultValue;
+                }
+            };
+
+            const [year, setYear] = useState(() => loadFromStorage('ccr_year', 2025));
+            const [month, setMonth] = useState(() => loadFromStorage('ccr_month', 11));
+            const [selectedNightTeam, setSelectedNightTeam] = useState(() => loadFromStorage('ccr_nightTeam', 'A팀'));
+            const [showSettings, setShowSettings] = useState(false);
+            const [selectedDay, setSelectedDay] = useState(null);
+            const [viewMode, setViewMode] = useState('month');
+            const [offDays, setOffDays] = useState(() => loadFromStorage('ccr_offDays', []));
+            const [overrides, setOverrides] = useState(() => loadFromStorage('ccr_overrides', {}));
+            const [startWithNight, setStartWithNight] = useState(() => loadFromStorage('ccr_startWithNight', false));
+            const [teams, setTeams] = useState(() => loadFromStorage('ccr_teams', TEAMS));
+            const [nightTeams, setNightTeams] = useState(() => loadFromStorage('ccr_nightTeams', NIGHT_TEAMS));
+            const [memo, setMemo] = useState(() => loadFromStorage('ccr_memo', ''));
+            const [darkMode, setDarkMode] = useState(() => loadFromStorage('ccr_darkMode', false));
+            const [showStats, setShowStats] = useState(false);
+            const [comments, setComments] = useState(() => loadFromStorage('ccr_comments', {}));
+            const [sealerRotationDate, setSealerRotationDate] = useState(() => loadFromStorage('ccr_sealerDate', '2025-01-05'));
+            const [toasts, setToasts] = useState([]);
+            const [searchTerm, setSearchTerm] = useState('');
+            const sealerTeams = ['컨베어팀', '로보트팀', '주설비팀'];
+
+            // Phase 2-4 States
+            const [vacations, setVacations] = useState(() => loadFromStorage('ccr_vacations', {}));
+            const [themeColor, setThemeColor] = useState(() => loadFromStorage('ccr_themeColor', '#003D82'));
+            const [lang, setLang] = useState(() => loadFromStorage('ccr_lang', 'ko'));
+            const [history, setHistory] = useState(() => loadFromStorage('ccr_history', []));
+            const [showHistory, setShowHistory] = useState(false);
+            const [touchStart, setTouchStart] = useState(null);
+            // 8번: 읽기전용 모드
+            const [isReadonly, setIsReadonly] = useState(false);
+            // PDF 배율 (기본 95%)
+            const [pdfScale, setPdfScale] = useState(95);
+            // 7번: 토요일 생산특근
+            const [saturdayOvertime, setSaturdayOvertime] = useState(() => loadFromStorage('ccr_saturdayOvertime', {}));
+            // 2번/6번: C조 개별 오버라이드
+            const [nightTeamOverrides, setNightTeamOverrides] = useState(() => loadFromStorage('ccr_nightTeamOverrides', {}));
+
+            // Translations
+            const T = {
+                ko: { title: '현대자동차 CCR 근무표', stats: '통계', settings: '설정', prev: '이전', next: '다음', am: '전반', pm: '후반', day: '주간', night: '야간', vacation: '휴가', theme: '테마', history: '변경 이력', share: 'URL 공유', copySuccess: 'URL이 복사되었습니다!', search: '근무자 검색...', memo: '메모', print: '인쇄', pdf: 'PDF', excel: '엑셀', import: '불러오기' },
+                en: { title: 'Hyundai CCR Schedule', stats: 'Stats', settings: 'Settings', prev: 'Prev', next: 'Next', am: 'AM', pm: 'PM', day: 'Day', night: 'Night', vacation: 'Vacation', theme: 'Theme', history: 'History', share: 'Share URL', copySuccess: 'URL Copied!', search: 'Search worker...', memo: 'Memo', print: 'Print', pdf: 'PDF', excel: 'Excel', import: 'Import' }
+            };
+            const t = T[lang];
+
+            // Add to history
+            const addHistory = (action) => {
+                const entry = { time: new Date().toISOString(), action };
+                setHistory(prev => [entry, ...prev].slice(0, 50));
+            };
+
+            // URL Sharing - 8번: 읽기전용 옵션 추가
+            const shareURL = (readonly = false) => {
+                const state = { year, month, selectedNightTeam, startWithNight, themeColor, readonly };
+                const encoded = btoa(JSON.stringify(state));
+                // file:// 프로토콜 호환성을 위해 href 사용
+                const textToCopy = `${window.location.href.split('?')[0]}?state=${encoded}`;
+
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    showToast(readonly ? '🔒 읽기전용 주소가 복사되었습니다.' : '🔗 공유 주소가 복사되었습니다.');
+                    alert("⚠️ 주의: 이 주소는 '내 컴퓨터'에 있는 파일 주소입니다.\n\n다른 사람에게 공유하려면,\n1. 이 '파일' 자체를 카톡으로 먼저 보내고\n2. 받은 사람이 파일을 연 뒤에 이 주소를 붙여넣어야 합니다.");
+                }).catch(err => {
+                    showToast('주소 복사 실패: ' + err);
+                });
+            };
+
+            // 9번: ICS 캘린더 파일 내보내기
+            const exportICS = () => {
+                let icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//CCR Schedule//KO
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+`;
+                calendar.days.forEach(day => {
+                    if (day.am !== 'OFF') {
+                        const dateStr = `${year}${String(month + 1).padStart(2, '0')}${String(day.d).padStart(2, '0')}`;
+                        icsContent += `BEGIN:VEVENT
+DTSTART:${dateStr}T080000
+DTEND:${dateStr}T120000
+SUMMARY:CCR 전반 - ${day.am}
+DESCRIPTION:전반 근무: ${day.am}\\n후반 근무: ${day.pm}
+END:VEVENT
+`;
+                    }
+                });
+                icsContent += 'END:VCALENDAR';
+
+                const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `CCR_${year}_${month + 1}월.ics`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('캘린더 파일 다운로드됨! 캘린더 앱에서 열기');
+            };
+
+            // Load from URL on mount
+            useEffect(() => {
+                const params = new URLSearchParams(window.location.search);
+                const stateParam = params.get('state');
+                if (stateParam) {
+                    try {
+                        const decoded = JSON.parse(atob(stateParam));
+                        if (decoded.year) setYear(decoded.year);
+                        if (decoded.month !== undefined) setMonth(decoded.month);
+                        if (decoded.selectedNightTeam) setSelectedNightTeam(decoded.selectedNightTeam);
+                        if (decoded.startWithNight !== undefined) setStartWithNight(decoded.startWithNight);
+                        if (decoded.themeColor) setThemeColor(decoded.themeColor);
+                        if (decoded.readonly) setIsReadonly(true);
+                    } catch (e) { console.log('Invalid state param'); }
+                }
+            }, []);
+
+            // Touch swipe for mobile
+            const handleTouchStart = (e) => setTouchStart(e.touches[0].clientX);
+            const handleTouchEnd = (e) => {
+                if (!touchStart) return;
+                const diff = touchStart - e.changedTouches[0].clientX;
+                if (diff > 50) nextMonth();
+                else if (diff < -50) prevMonth();
+                setTouchStart(null);
+            };
+
+            const showToast = (message, type = 'success') => {
+                const id = Date.now();
+                setToasts(prev => [...prev, { id, message, type }]);
+                setTimeout(() => {
+                    setToasts(prev => prev.filter(t => t.id !== id));
+                }, 3000);
+            };
+
+            // LocalStorage에 자동 저장
+            useEffect(() => {
+                localStorage.setItem('ccr_year', JSON.stringify(year));
+            }, [year]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_month', JSON.stringify(month));
+            }, [month]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_nightTeam', JSON.stringify(selectedNightTeam));
+            }, [selectedNightTeam]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_offDays', JSON.stringify(offDays));
+            }, [offDays]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_overrides', JSON.stringify(overrides));
+            }, [overrides]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_startWithNight', JSON.stringify(startWithNight));
+            }, [startWithNight]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_teams', JSON.stringify(teams));
+            }, [teams]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_nightTeams', JSON.stringify(nightTeams));
+            }, [nightTeams]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_memo', JSON.stringify(memo));
+            }, [memo]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_darkMode', JSON.stringify(darkMode));
+            }, [darkMode]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_sealerDate', JSON.stringify(sealerRotationDate));
+            }, [sealerRotationDate]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_comments', JSON.stringify(comments));
+            }, [comments]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_vacations', JSON.stringify(vacations));
+            }, [vacations]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_themeColor', JSON.stringify(themeColor));
+            }, [themeColor]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_lang', JSON.stringify(lang));
+            }, [lang]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_history', JSON.stringify(history));
+            }, [history]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_saturdayOvertime', JSON.stringify(saturdayOvertime));
+            }, [saturdayOvertime]);
+
+            useEffect(() => {
+                localStorage.setItem('ccr_nightTeamOverrides', JSON.stringify(nightTeamOverrides));
+            }, [nightTeamOverrides]);
+
+            // 단축키 지원
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+                    if (e.key === 'ArrowLeft') {
+                        setMonth(prev => prev === 0 ? 11 : prev - 1);
+                        if (month === 0) setYear(prev => prev - 1);
+                    } else if (e.key === 'ArrowRight') {
+                        setMonth(prev => prev === 11 ? 0 : prev + 1);
+                        if (month === 11) setYear(prev => prev + 1);
+                    } else if (e.key === 'Escape') {
+                        setSelectedDay(null);
+                        setShowSettings(false);
+                        setShowStats(false);
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [month, year]);
+
+            // 팀별로 한 명씩 교차 배치
+            const allWorkers = [];
+            const maxLength = Math.max(teams['컨베어'].length, teams['로보트'].length, teams['주설비'].length);
+            for (let i = 0; i < maxLength; i++) {
+                if (teams['컨베어'][i]) allWorkers.push(teams['컨베어'][i]);
+                if (teams['로보트'][i]) allWorkers.push(teams['로보트'][i]);
+                if (teams['주설비'][i]) allWorkers.push(teams['주설비'][i]);
+            }
+
+            const calendar = useMemo(() => {
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const firstDay = new Date(year, month, 1).getDay();
+                const days = [];
+                let workDay = 0;
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const date = new Date(year, month, d);
+                    const dow = date.getDay();
+                    const week = Math.floor((d + firstDay - 1) / 7);
+                    const dateKey = `${year}-${month + 1}-${d}`;
+
+                    let am, pm;
+                    const isOffDay = offDays.includes(dateKey);
+
+                    if (dow === 0 || isOffDay) {
+                        am = pm = 'OFF';
+                    } else if (overrides[dateKey]) {
+                        am = overrides[dateKey].am;
+                        pm = overrides[dateKey].pm;
+                        workDay++;
+                    } else {
+                        am = allWorkers[workDay % allWorkers.length];
+                        pm = allWorkers[(workDay + 1) % allWorkers.length];
+                        workDay++;
+                    }
+
+                    // 주간/야간 결정 (startWithNight에 따라 반전)
+                    const isNightWeek = startWithNight ? (week % 2 === 0) : (week % 2 === 1);
+                    days.push({ d, dow, am, pm, night: isNightWeek, week, dateKey, isOffDay });
+                }
+
+                return { days, firstDay };
+            }, [year, month, offDays, overrides, startWithNight, teams]);
+
+            const prevMonth = () => {
+                if (month === 0) {
+                    setMonth(11);
+                    setYear(year - 1);
+                } else {
+                    setMonth(month - 1);
+                }
+            };
+
+            const nextMonth = () => {
+                if (month === 11) {
+                    setMonth(0);
+                    setYear(year + 1);
+                } else {
+                    setMonth(month + 1);
+                }
+            };
+
+            const exportExcel = () => {
+                const data = calendar.days.map(day => ({
+                    '날짜': `${year}-${month + 1}-${day.d}`,
+                    '요일': ['일', '월', '화', '수', '목', '금', '토'][day.dow],
+                    '전반': day.am,
+                    '후반': day.pm,
+                    '주야': day.night ? '야간' : '주간'
+                }));
+
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "근무표");
+                XLSX.writeFile(wb, `CCR근무표_${year}_${month + 1}월.xlsx`);
+            };
+
+            const importExcel = () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.xlsx, .xls';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        try {
+                            const data = new Uint8Array(evt.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                            const newOverrides = {};
+                            jsonData.forEach(row => {
+                                if (row['날짜'] && row['전반'] && row['후반']) {
+                                    const dateKey = row['날짜'];
+                                    if (row['전반'] !== 'OFF' && row['후반'] !== 'OFF') {
+                                        newOverrides[dateKey] = {
+                                            am: row['전반'],
+                                            pm: row['후반']
+                                        };
+                                    }
+                                }
+                            });
+
+                            setOverrides(newOverrides);
+                            showToast('엑셀 파일을 성공적으로 불러왔습니다!');
+                        } catch (error) {
+                            showToast('엑셀 파일을 읽는 중 오류가 발생했습니다.');
+                            console.error(error);
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                };
+                input.click();
+            };
+
+            const getSealerTeam = (dateStr) => {
+                const date = new Date(dateStr);
+                const refDate = new Date(sealerRotationDate);
+                // Set both to midnight to avoid time issues
+                date.setHours(0, 0, 0, 0);
+                refDate.setHours(0, 0, 0, 0);
+
+                const diffTime = date.getTime() - refDate.getTime();
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays < 0) return null;
+                const cycleIndex = Math.floor(diffDays / 14) % 3;
+                return sealerTeams[cycleIndex];
+            };
+
+            const exportPDF = async () => {
+                try {
+                    const calendarElement = document.getElementById('print-area');
+
+                    const canvas = await html2canvas(calendarElement, {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        windowWidth: 1400,
+                        onclone: (clonedDoc) => {
+                            // PDF 저장 최적화
+                            const days = clonedDoc.querySelectorAll('.calendar-day');
+                            days.forEach(day => {
+                                day.style.height = 'auto';
+                                day.style.minHeight = '160px';
+                                day.style.maxHeight = 'none';
+                                day.style.overflow = 'visible';
+                                day.style.fontSize = '8.5px';
+                                day.style.padding = '2px 2px 4px 2px';
+                                day.style.lineHeight = '1.1';
+                            });
+
+                            const elements = clonedDoc.querySelectorAll('.calendar-day div');
+                            elements.forEach(el => {
+                                el.style.marginBottom = '1px';
+                                el.style.marginTop = '0px';
+                                el.style.paddingTop = '0px';
+                                el.style.paddingBottom = '0px';
+                            });
+
+                            const clonedTitle = clonedDoc.querySelector('.print-title');
+                            if (clonedTitle) clonedTitle.style.display = 'block';
+
+                            // 사용자 설정 배율 적용 (내용을 축소해서 A4 한 장에 더 많이 담기 위함)
+                            const container = clonedDoc.getElementById('print-area');
+                            if (container) {
+                                const scale = pdfScale / 100;
+                                container.style.transform = `scale(${scale})`;
+                                container.style.transformOrigin = 'top left'; // 왼쪽 위 기준 축소
+                                // 폭 보정: 배율이 줄어든 만큼 가로 폭을 넓혀서 A4 가로를 꽉 채우게 함
+                                const widthPercent = 100 / scale;
+                                container.style.width = `${widthPercent}%`;
+                                // 높이 보정은 자동
+                            }
+                        }
+                    });
+                    const imgData = canvas.toDataURL('image/png');
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('l', 'mm', 'a4'); // A4 가로 (297mm x 210mm)
+
+                    const pageWidth = 297;
+                    const pageHeight = 210;
+
+                    // 원본 비율 계산
+                    const originalImgWidth = pageWidth;
+                    const originalImgHeight = (canvas.height * pageWidth) / canvas.width;
+
+                    // 사용자 배율 (기본 95%)
+                    const userScale = pdfScale / 100;
+
+                    // 내용이 페이지 높이를 넘으면, 한 페이지에 맞추기 위한 추가 축소 계산
+                    let fitScale = 1;
+                    if (originalImgHeight * userScale > pageHeight) {
+                        // 페이지 높이에 맞추려면 얼마나 더 축소해야 하는지 계산
+                        fitScale = pageHeight / (originalImgHeight * userScale);
+                    }
+
+                    // 최종 배율 = 사용자 배율 × 맞춤 배율
+                    const finalScale = userScale * fitScale;
+
+                    const imgWidth = pageWidth * finalScale;
+                    const imgHeight = originalImgHeight * finalScale;
+
+                    // 중앙 정렬
+                    const xOffset = (pageWidth - imgWidth) / 2;
+                    const yOffset = (pageHeight - imgHeight) / 2; // 세로도 중앙 정렬
+
+                    // 한 페이지에 출력 (맞춰서 축소했으므로 항상 1페이지)
+                    pdf.addImage(imgData, 'PNG', xOffset, yOffset > 0 ? yOffset : 0, imgWidth, imgHeight);
+
+                    pdf.save(`CCR근무표_${year}_${month + 1}월.pdf`);
+                    showToast(`PDF 저장 완료! (배율: ${Math.round(finalScale * 100)}%)`);
+                } catch (error) {
+                    showToast('PDF 생성 중 오류가 발생했습니다.');
+                    console.error(error);
+                }
+            };
+
+            // 근무 통계 계산
+            const calculateStats = useMemo(() => {
+                const stats = {};
+                allWorkers.forEach(worker => {
+                    stats[worker] = { total: 0, am: 0, pm: 0, dayShift: 0, nightShift: 0 };
+                });
+
+                calendar.days.forEach(day => {
+                    if (day.am !== 'OFF' && stats[day.am]) {
+                        stats[day.am].total++;
+                        stats[day.am].am++;
+                        if (day.night) stats[day.am].nightShift++;
+                        else stats[day.am].dayShift++;
+                    }
+                    if (day.pm !== 'OFF' && stats[day.pm]) {
+                        stats[day.pm].total++;
+                        stats[day.pm].pm++;
+                        if (day.night) stats[day.pm].nightShift++;
+                        else stats[day.pm].dayShift++;
+                    }
+                });
+
+                return stats;
+            }, [calendar, allWorkers]);
+
+            const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+
+            // 연도 보기용 - 특정 월의 미니 캘린더 생성
+            const generateMiniCalendar = (y, m) => {
+                const daysInMonth = new Date(y, m + 1, 0).getDate();
+                const firstDay = new Date(y, m, 1).getDay();
+                const days = [];
+                let workDay = 0;
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const date = new Date(y, m, d);
+                    const dow = date.getDay();
+                    const week = Math.floor((d + firstDay - 1) / 7);
+                    const dateKey = `${y}-${m + 1}-${d}`;
+
+                    let am, pm;
+                    const isOffDay = offDays.includes(dateKey);
+
+                    if (dow === 0 || isOffDay) {
+                        am = pm = 'OFF';
+                    } else if (overrides[dateKey]) {
+                        am = overrides[dateKey].am;
+                        pm = overrides[dateKey].pm;
+                        workDay++;
+                    } else {
+                        am = allWorkers[workDay % allWorkers.length];
+                        pm = allWorkers[(workDay + 1) % allWorkers.length];
+                        workDay++;
+                    }
+
+                    // 주간/야간 결정 (startWithNight에 따라 반전)
+                    const isNightWeek = startWithNight ? (week % 2 === 0) : (week % 2 === 1);
+                    days.push({ d, dow, am, pm, night: isNightWeek, week, dateKey, isOffDay });
+                }
+
+                return { days, firstDay };
+            };
+
+            return (
+                <div
+                    className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-[#f5f5f5]'}`}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    {/* Header */}
+                    <div style={{ backgroundColor: themeColor }} className="text-white p-4 flex justify-between items-center no-print flex-wrap gap-2">
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold">현대자동차 CCR 근무표</h1>
+                            {isReadonly && (
+                                <span className="bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-sm font-bold animate-pulse">
+                                    👁️ 읽기전용
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex flex-wrap gap-2 items-center">
+                            {/* 근무자 검색 */}
+                            <div className="relative group no-print">
+                                <span className="absolute left-3 top-2.5 text-gray-300">🔍</span>
+                                <input
+                                    type="text"
+                                    placeholder={t.search}
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-10 pr-4 py-2 rounded-lg bg-white/20 text-white placeholder-gray-300 border border-white/30 focus:ring-2 focus:ring-cyan-400 outline-none w-40 transition-all focus:w-56"
+                                />
+                                {searchTerm && (
+                                    <button onClick={() => setSearchTerm('')} className="absolute right-3 top-2.5 text-gray-300 hover:text-white">✕</button>
+                                )}
+                            </div>
+
+                            <div className="relative group">
+                                <button onClick={() => shareURL(false)} className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg font-bold text-sm">
+                                    🔗 URL 공유
+                                </button>
+                                <button onClick={() => { setIsReadonly(!isReadonly); shareURL(!isReadonly); }} className={`${isReadonly ? 'bg-yellow-400 text-yellow-900' : 'bg-yellow-500 hover:bg-yellow-600'} px-3 py-2 rounded-lg font-bold text-sm ml-1`} title="읽기전용 모드 토글">
+                                    {isReadonly ? '✏️ 편집모드' : '👁️ 읽기전용'}
+                                </button>
+                            </div>
+                            <button onClick={exportICS} className="bg-green-600 hover:bg-green-700 px-3 py-2 rounded-lg font-bold text-sm">
+                                📅 캘린더
+                            </button>
+                            <button onClick={() => setShowHistory(true)} className="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg font-bold text-sm">
+                                📜 변경이력
+                            </button>
+                            <button onClick={() => setShowStats(true)} className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-bold">
+                                📊 통계
+                            </button>
+                            <button onClick={() => setDarkMode(!darkMode)} className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg font-bold">
+                                {darkMode ? '☀️' : '🌙'}
+                            </button>
+                            {!isReadonly && (
+                                <button onClick={() => setShowSettings(true)} className="bg-cyan-500 hover:bg-cyan-600 px-4 py-2 rounded-lg font-bold">
+                                    ⚙️ 설정
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Controls */}
+                    <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-4 shadow no-print`}>
+                        <div className="max-w-7xl mx-auto flex flex-wrap gap-4 items-center justify-between">
+                            <button onClick={prevMonth} className="bg-[#003D82] text-white px-6 py-2 rounded-lg font-bold">
+                                ◀ 이전
+                            </button>
+
+                            <div
+                                onClick={() => setViewMode(viewMode === 'month' ? 'year' : 'month')}
+                                className={`text-2xl font-bold border-2 border-gray-300 px-8 py-2 rounded-lg cursor-pointer hover:bg-gray-100 transition ${darkMode ? 'text-white bg-gray-700' : ''}`}
+                            >
+                                {viewMode === 'month' ? `${year}년 ${monthNames[month]}` : `${year}년`}
+                            </div>
+
+                            <button onClick={nextMonth} className="bg-[#003D82] text-white px-6 py-2 rounded-lg font-bold">
+                                다음 ▶
+                            </button>
+                        </div>
+
+                        <div className="max-w-7xl mx-auto mt-4 flex flex-wrap gap-4 items-center">
+                            <div className="flex items-center gap-2">
+                                <span className={`font-bold ${darkMode ? 'text-white' : ''}`}>C조:</span>
+                                <select
+                                    value={selectedNightTeam}
+                                    onChange={(e) => setSelectedNightTeam(e.target.value)}
+                                    className="border-2 border-gray-300 px-4 py-2 rounded-lg"
+                                >
+                                    {Object.keys(nightTeams).map(team => (
+                                        <option key={team} value={team}>
+                                            {team} ({nightTeams[team].join(', ')})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <span className={`font-bold ${darkMode ? 'text-white' : ''}`}>시작:</span>
+                                <button
+                                    onClick={() => setStartWithNight(!startWithNight)}
+                                    className={`${startWithNight ? 'bg-blue-900 text-white' : 'bg-yellow-400'} hover:opacity-80 px-6 py-2 rounded-lg font-bold transition`}
+                                >
+                                    {startWithNight ? '🌙 야간' : '☀️ 주간'}
+                                </button>
+                            </div>
+
+                            <div className="flex items-center gap-1 bg-white/50 p-1 rounded-lg">
+                                <span className={`text-xs font-bold ${darkMode ? 'text-white' : 'text-gray-700'}`}>인쇄배율:</span>
+                                <input
+                                    type="number"
+                                    min="50"
+                                    max="150"
+                                    value={pdfScale}
+                                    onChange={(e) => setPdfScale(Number(e.target.value))}
+                                    className="w-16 px-2 py-1 rounded border text-center text-sm"
+                                />
+                                <span className={`text-xs ${darkMode ? 'text-white' : 'text-gray-700'}`}>%</span>
+                            </div>
+
+                            <button
+                                onClick={exportExcel}
+                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2"
+                            >
+                                📤 엑셀
+                            </button>
+
+                            <button
+                                onClick={importExcel}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold"
+                            >
+                                📤 불러오기
+                            </button>
+
+                            <button
+                                onClick={exportPDF}
+                                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-bold"
+                            >
+                                📄 PDF
+                            </button>
+
+                            <button
+                                onClick={() => window.print()}
+                                className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-bold"
+                            >
+                                🖨️ 인쇄
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Main Content Area (Printed) */}
+                    <div id="print-area" className="bg-white">
+                        {/* Print Only Title */}
+                        <div className="hidden print-only-title text-3xl font-bold text-center py-8 text-[#003D82] border-b-2 border-[#003D82] mb-6 print-title">
+                            현대자동차 CCR 근무표 ({year}년 {monthNames[month]})
+                        </div>
+
+                        {/* Calendar */}
+                        <div className="max-w-7xl mx-auto p-4">
+                            {viewMode === 'month' ? (
+                                // 월별 상세 보기
+                                <div className="bg-white rounded-lg shadow-lg overflow-hidden calendar-container">
+                                    {/* Day headers */}
+                                    <div className="grid grid-cols-7 bg-[#003D82] text-white">
+                                        {['일', '월', '화', '수', '목', '금', '토'].map((n, i) => (
+                                            <div key={i} className={`text-center font-bold p-3 text-lg ${i === 0 ? 'text-red-300' : ''}`}>
+                                                {n}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Calendar days */}
+                                    <div className="grid grid-cols-7 gap-px bg-gray-200">
+                                        {Array(calendar.firstDay).fill(0).map((_, i) => (
+                                            <div key={'e' + i} className="bg-gray-100 min-h-32 calendar-day"></div>
+                                        ))}
+                                        {calendar.days.map((day) => {
+                                            const isNight = day.night;
+                                            const isSunday = day.dow === 0;
+                                            const bgColor = isNight ? 'bg-[#1e3a5f] text-white' : 'bg-white';
+
+                                            // 검색 강조 로직
+                                            const isHighlighted = searchTerm && (
+                                                (day.am === searchTerm) ||
+                                                (day.pm === searchTerm) ||
+                                                (isNight && nightTeams[selectedNightTeam].includes(searchTerm)) ||
+                                                (comments[day.dateKey]?.includes(searchTerm))
+                                            );
+
+                                            return (
+                                                <div
+                                                    key={day.d}
+                                                    onClick={() => !isReadonly && setSelectedDay(day)}
+                                                    style={(isSunday || day.isOffDay) ? { backgroundColor: '#fca5a5', color: '#7f1d1d' } : {}}
+                                                    className={`${(isSunday || day.isOffDay) ? '' : bgColor} p-3 min-h-32 relative cursor-pointer hover:opacity-80 transition calendar-day ${isHighlighted ? 'ring-4 ring-yellow-400 z-10 shadow-xl' : ''}`}
+                                                >
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div className="flex items-center gap-1">
+                                                            <div className={`font-bold text-lg ${isSunday && !isNight ? 'text-red-500' : ''} ${day.dow === 6 && !isNight ? 'text-blue-500' : ''}`}>
+                                                                {day.d}
+                                                            </div>
+                                                            {/* 7번: 토요일 특근 배지 */}
+                                                            {day.dow === 6 && saturdayOvertime[day.dateKey] && (
+                                                                <span className="text-[9px] bg-orange-500 text-white px-1 py-0.5 rounded font-bold">특근</span>
+                                                            )}
+                                                        </div>
+                                                        {getSealerTeam(day.dateKey) && (
+                                                            <div className="text-[10px] text-purple-600 font-bold bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 italic shadow-sm whitespace-nowrap">
+                                                                ⚠️ 안착불량({getSealerTeam(day.dateKey)})
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* 주간/야간 표시 */}
+                                                    {!isSunday && (
+                                                        <div className="text-xs mb-2">
+                                                            {isNight ? '🌙 야간' : '☀️ 주간'}
+                                                        </div>
+                                                    )}
+
+                                                    {/* 근무자 */}
+                                                    <div className="space-y-1 text-sm day-worker-info">
+                                                        <div className={isNight ? 'text-yellow-200' : 'text-blue-700'}>
+                                                            <span className="font-semibold text-[0.95em]">전반: {day.am}</span>
+                                                        </div>
+                                                        <div className={isNight ? 'text-green-300' : 'text-green-600'}>
+                                                            <span className="font-semibold text-[0.95em]">후반: {day.pm}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* C조 표시 (야간 주 전체) - 2번/6번: 개별 오버라이드 지원 */}
+                                                    {isNight && (
+                                                        <div className="mt-2 pt-1 border-t border-gray-500 text-xs text-cyan-300 night-c-info">
+                                                            <div className="font-semibold scale-95 origin-left">
+                                                                {isSunday ? '조기가동' : 'C조'}: {nightTeamOverrides[day.dateKey] || nightTeams[selectedNightTeam].join(', ')}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* 내판실러 안착불량 조치팀 표시 - 상단으로 이동됨 */}
+
+                                                    {/* 코멘트 표시 */}
+                                                    {comments[day.dateKey] && (
+                                                        <div className="mt-1 text-xs text-red-600 font-bold bg-yellow-100 px-1 rounded truncate shadow-sm border border-yellow-200">
+                                                            {comments[day.dateKey]}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ) : (
+                                // 연도 보기 (12개월 미니 캘린더)
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((m) => {
+                                        const miniCal = generateMiniCalendar(year, m);
+                                        return (
+                                            <div
+                                                key={m}
+                                                onClick={() => {
+                                                    setMonth(m);
+                                                    setViewMode('month');
+                                                }}
+                                                className="bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer"
+                                            >
+                                                <div className="bg-[#003D82] text-white text-center font-bold p-2">
+                                                    {monthNames[m]}
+                                                </div>
+                                                <div className="p-2">
+                                                    {/* 미니 요일 헤더 */}
+                                                    <div className="grid grid-cols-7 text-xs text-center font-bold mb-1">
+                                                        {['일', '월', '화', '수', '목', '금', '토'].map((n, i) => (
+                                                            <div key={i} className={i === 0 ? 'text-red-500' : ''}>{n}</div>
+                                                        ))}
+                                                    </div>
+                                                    {/* 미니 캘린더 날짜들 */}
+                                                    <div className="grid grid-cols-7 gap-px">
+                                                        {Array(miniCal.firstDay).fill(0).map((_, i) => (
+                                                            <div key={'e' + i} className="text-xs h-8"></div>
+                                                        ))}
+                                                        {miniCal.days.map((day) => {
+                                                            const isNight = day.night;
+                                                            const isSunday = day.dow === 0;
+                                                            return (
+                                                                <div
+                                                                    key={day.d}
+                                                                    className={`text-xs h-8 flex items-center justify-center rounded ${isNight ? 'bg-[#1e3a5f] text-white' : 'bg-gray-100'
+                                                                        } ${isSunday ? 'text-red-500 font-bold' : ''}`}
+                                                                >
+                                                                    {day.d}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 메모 영역 */}
+                        <div className="max-w-7xl mx-auto px-4 pb-4 memo-area">
+                            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-4 print:shadow-none print:border-t print:mt-4`}>
+                                <h3 className={`font-bold mb-2 text-lg ${darkMode ? 'text-cyan-400' : 'text-[#003D82]'}`}>📝 메모</h3>
+                                <textarea
+                                    value={memo}
+                                    onChange={(e) => setMemo(e.target.value)}
+                                    placeholder="메모를 입력하세요..."
+                                    className={`w-full border-2 rounded-lg p-3 focus:outline-none ${darkMode
+                                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400'
+                                        : 'bg-white border-gray-300 focus:border-[#003D82]'
+                                        } print:border-none print:resize-none`}
+                                    rows="4"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Day Detail Modal */}
+                    {selectedDay && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                            <div className="bg-white rounded-lg max-w-md w-full">
+                                <div className="bg-[#003D82] text-white p-4 flex justify-between items-center">
+                                    <h2 className="text-xl font-bold">
+                                        {year}년 {month + 1}월 {selectedDay.d}일 ({['일', '월', '화', '수', '목', '금', '토'][selectedDay.dow]})
+                                    </h2>
+                                    <button onClick={() => setSelectedDay(null)} className="text-2xl">✕</button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    {/* OFF 설정 - 토글 UI 개선 */}
+                                    <div className="flex items-center justify-between p-4 bg-gray-100 rounded">
+                                        <span className="font-bold">휴무일 설정:</span>
+                                        <button
+                                            onClick={() => {
+                                                const isCurrentlyOff = offDays.includes(selectedDay.dateKey);
+                                                if (isCurrentlyOff) {
+                                                    setOffDays(offDays.filter(d => d !== selectedDay.dateKey));
+                                                    setSelectedDay({ ...selectedDay, isOffDay: false });
+                                                    showToast(`${month + 1}월 ${selectedDay.d}일: 근무일로 변경`);
+                                                } else {
+                                                    setOffDays([...offDays, selectedDay.dateKey]);
+                                                    setSelectedDay({ ...selectedDay, isOffDay: true });
+                                                    showToast(`${month + 1}월 ${selectedDay.d}일: 휴무일로 변경`);
+                                                }
+                                            }}
+                                            className={`px-6 py-3 rounded-lg font-bold text-lg transition-all duration-300 transform hover:scale-105 ${(offDays.includes(selectedDay.dateKey) || selectedDay.dow === 0)
+                                                ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg'
+                                                : 'bg-green-500 hover:bg-green-600 text-white shadow-lg'
+                                                }`}
+                                        >
+                                            {(offDays.includes(selectedDay.dateKey) || selectedDay.dow === 0) ? '🔴 OFF (휴무)' : '🟢 근무일'}
+                                        </button>
+                                    </div>
+
+                                    {/* 근무자 변경 */}
+                                    {!selectedDay.isOffDay && selectedDay.dow !== 0 && (
+                                        <>
+                                            <div className="space-y-2">
+                                                <label className="block font-bold text-blue-700">전반 근무자</label>
+                                                <select
+                                                    value={selectedDay.am}
+                                                    onChange={(e) => {
+                                                        setOverrides({
+                                                            ...overrides,
+                                                            [selectedDay.dateKey]: {
+                                                                am: e.target.value,
+                                                                pm: selectedDay.pm
+                                                            }
+                                                        });
+                                                    }}
+                                                    className="w-full border-2 border-gray-300 p-2 rounded"
+                                                >
+                                                    {allWorkers.map(w => (
+                                                        <option key={w} value={w}>{w}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="block font-bold text-green-600">후반 근무자</label>
+                                                <select
+                                                    value={selectedDay.pm}
+                                                    onChange={(e) => {
+                                                        setOverrides({
+                                                            ...overrides,
+                                                            [selectedDay.dateKey]: {
+                                                                am: selectedDay.am,
+                                                                pm: e.target.value
+                                                            }
+                                                        });
+                                                    }}
+                                                    className="w-full border-2 border-gray-300 p-2 rounded"
+                                                >
+                                                    {allWorkers.map(w => (
+                                                        <option key={w} value={w}>{w}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* 7번: 토요일 특근 설정 */}
+                                    {selectedDay.dow === 6 && (
+                                        <div className="flex items-center justify-between p-4 bg-orange-50 rounded border border-orange-200">
+                                            <span className="font-bold text-orange-700">🏭 토요일 생산특근:</span>
+                                            <button
+                                                onClick={() => {
+                                                    const isCurrentlyOvertime = saturdayOvertime[selectedDay.dateKey];
+                                                    setSaturdayOvertime({
+                                                        ...saturdayOvertime,
+                                                        [selectedDay.dateKey]: !isCurrentlyOvertime
+                                                    });
+                                                    showToast(isCurrentlyOvertime ? '특근 해제' : '특근 설정');
+                                                }}
+                                                className={`px-4 py-2 rounded-lg font-bold transition ${saturdayOvertime[selectedDay.dateKey]
+                                                    ? 'bg-orange-500 text-white'
+                                                    : 'bg-gray-200 text-gray-700'
+                                                    }`}
+                                            >
+                                                {saturdayOvertime[selectedDay.dateKey] ? '✅ 특근' : '미특근'}
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* 2번/6번: C조 개별 수정 */}
+                                    {selectedDay.night && (
+                                        <div className="space-y-2 p-4 bg-blue-50 rounded border border-blue-200">
+                                            <label className="block font-bold text-blue-700">
+                                                {selectedDay.dow === 0 ? '🌅 조기가동 근무자' : '🌙 C조 근무자'} (직접 입력)
+                                            </label>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder="예: 민성, 광수, 이진"
+                                                    value={nightTeamOverrides[selectedDay.dateKey] || ''}
+                                                    onChange={(e) => {
+                                                        setNightTeamOverrides({
+                                                            ...nightTeamOverrides,
+                                                            [selectedDay.dateKey]: e.target.value
+                                                        });
+                                                    }}
+                                                    className="flex-1 border-2 border-blue-300 p-2 rounded-lg focus:border-blue-500 outline-none"
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        const newOverrides = { ...nightTeamOverrides };
+                                                        delete newOverrides[selectedDay.dateKey];
+                                                        setNightTeamOverrides(newOverrides);
+                                                        showToast('C조 기본값으로 복원');
+                                                    }}
+                                                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg font-bold"
+                                                >
+                                                    삭제
+                                                </button>
+                                            </div>
+                                            <p className="text-xs text-gray-500">비워두면 기본 C조({nightTeams[selectedNightTeam].join(', ')})가 표시됩니다.</p>
+                                        </div>
+                                    )}
+
+                                    {/* 코멘트 입력 */}
+                                    <div className="space-y-2 mt-4">
+                                        <label className="block font-bold text-gray-700">메모 / 특이사항</label>
+                                        <input
+                                            type="text"
+                                            placeholder="예: 석가탄신일, 창립기념일 등"
+                                            value={comments[selectedDay.dateKey] || ''}
+                                            onChange={(e) => {
+                                                setComments({
+                                                    ...comments,
+                                                    [selectedDay.dateKey]: e.target.value
+                                                });
+                                            }}
+                                            className="w-full border-2 border-gray-300 p-3 rounded-lg focus:border-blue-500 outline-none transition"
+                                        />
+                                    </div>
+
+                                    <div className="flex gap-2 mt-6">
+                                        <button
+                                            onClick={() => setSelectedDay(null)}
+                                            className="flex-1 bg-[#003D82] text-white py-3 rounded-lg font-bold hover:bg-[#002555]"
+                                        >
+                                            ✓ 확인
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Settings Modal */}
+                    {showSettings && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                            <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                                <div className="bg-[#003D82] text-white p-4 flex justify-between items-center">
+                                    <h2 className="text-xl font-bold">⚙️ 설정</h2>
+                                    <button onClick={() => setShowSettings(false)} className="text-2xl">✕</button>
+                                </div>
+                                <div className="p-6">
+                                    <h3 className="text-lg font-bold mb-4">팀별 근무자</h3>
+                                    {Object.entries(teams).map(([teamName, members]) => (
+                                        <div key={teamName} className="mb-6 p-4 border-2 border-gray-300 rounded-lg">
+                                            <div className="font-bold text-[#003D82] mb-3 text-lg">
+                                                {teamName} ({members.length}명)
+                                            </div>
+
+                                            {/* 근무자 목록 */}
+                                            <div className="space-y-2 mb-3">
+                                                {members.map((member, idx) => (
+                                                    <div key={idx} className="flex items-center gap-2">
+                                                        <input
+                                                            type="text"
+                                                            value={member}
+                                                            onChange={(e) => {
+                                                                const newMembers = [...members];
+                                                                newMembers[idx] = e.target.value;
+                                                                setTeams({ ...teams, [teamName]: newMembers });
+                                                            }}
+                                                            className="flex-1 border-2 border-gray-300 px-3 py-2 rounded"
+                                                        />
+                                                        <button
+                                                            onClick={() => {
+                                                                const newMembers = members.filter((_, i) => i !== idx);
+                                                                setTeams({ ...teams, [teamName]: newMembers });
+                                                            }}
+                                                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded font-bold"
+                                                        >
+                                                            삭제
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* 추가 버튼 */}
+                                            <button
+                                                onClick={() => {
+                                                    const newName = prompt('추가할 근무자 이름을 입력하세요:');
+                                                    if (newName && newName.trim()) {
+                                                        setTeams({ ...teams, [teamName]: [...members, newName.trim()] });
+                                                    }
+                                                }}
+                                                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-bold"
+                                            >
+                                                + 근무자 추가
+                                            </button>
+                                        </div>
+                                    ))}
+
+                                    <h3 className="text-lg font-bold mb-4 mt-6">야간 C조 팀</h3>
+                                    {Object.entries(nightTeams).map(([teamName, members]) => (
+                                        <div key={teamName} className="mb-4 p-4 border-2 border-gray-300 rounded-lg">
+                                            <div className="font-bold text-[#003D82] mb-3">
+                                                {teamName} ({members.length}명)
+                                            </div>
+
+                                            {/* C조 근무자 목록 */}
+                                            <div className="space-y-2 mb-3">
+                                                {members.map((member, idx) => (
+                                                    <div key={idx} className="flex items-center gap-2">
+                                                        <input
+                                                            type="text"
+                                                            value={member}
+                                                            onChange={(e) => {
+                                                                const newMembers = [...members];
+                                                                newMembers[idx] = e.target.value;
+                                                                setNightTeams({ ...nightTeams, [teamName]: newMembers });
+                                                            }}
+                                                            className="flex-1 border-2 border-gray-300 px-3 py-2 rounded"
+                                                        />
+                                                        <button
+                                                            onClick={() => {
+                                                                const newMembers = members.filter((_, i) => i !== idx);
+                                                                setNightTeams({ ...nightTeams, [teamName]: newMembers });
+                                                            }}
+                                                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded font-bold"
+                                                        >
+                                                            삭제
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* C조 추가 버튼 */}
+                                            <button
+                                                onClick={() => {
+                                                    const newName = prompt('추가할 근무자 이름을 입력하세요:');
+                                                    if (newName && newName.trim()) {
+                                                        setNightTeams({ ...nightTeams, [teamName]: [...members, newName.trim()] });
+                                                    }
+                                                }}
+                                                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-bold text-sm"
+                                            >
+                                                + 근무자 추가
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* 내판실러 로테이션 설정 */}
+                                <div className="p-6 border-t-2 border-gray-100">
+                                    <h3 className="text-lg font-bold mb-4 text-[#003D82]">🔄 내판실러 안착불량 조치 로테이션</h3>
+                                    <div className="bg-blue-50 p-4 rounded-lg space-y-4">
+                                        <div className="flex flex-col gap-2">
+                                            <label className="font-bold text-gray-700 text-sm">로테이션 시작 기준일 (컨베어팀 시작일):</label>
+                                            <input
+                                                type="date"
+                                                value={sealerRotationDate}
+                                                onChange={(e) => setSealerRotationDate(e.target.value)}
+                                                className="border-2 border-gray-300 p-2 rounded-lg focus:border-blue-500 outline-none w-full max-w-xs text-black"
+                                            />
+                                        </div>
+                                        <div className="text-sm text-gray-600 space-y-1">
+                                            <p>• 2주(14일) 간격으로 팀이 자동으로 변경됩니다.</p>
+                                            <p>• 순서: <strong>컨베어팀 → 로보트팀 → 주설비팀</strong></p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 테마 설정 */}
+                                <div className="p-6 border-t-2 border-gray-100">
+                                    <h3 className="text-lg font-bold mb-4" style={{ color: themeColor }}>🎨 테마 색상</h3>
+                                    <div className="flex items-center gap-2 flex-wrap mb-4">
+                                        {['#003D82', '#1e40af', '#059669', '#dc2626', '#7c3aed', '#ea580c', '#0891b2', '#be185d'].map(color => (
+                                            <button key={color} onClick={() => { setThemeColor(color); addHistory(`테마: ${color}`); }} style={{ backgroundColor: color }} className={`w-10 h-10 rounded-lg border-2 ${themeColor === color ? 'border-white ring-2 ring-offset-2 ring-gray-400' : 'border-transparent'} hover:scale-110 transition`} />
+                                        ))}
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <label className="font-bold text-gray-700">직접 선택:</label>
+                                        <input type="color" value={themeColor} onChange={(e) => { setThemeColor(e.target.value); addHistory(`테마: ${e.target.value}`); }} className="w-12 h-10 rounded cursor-pointer border-2 border-gray-300" />
+                                        <button onClick={() => setThemeColor('#003D82')} className="bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded text-sm font-bold">기본</button>
+                                    </div>
+                                </div>
+
+                                {/* 휴가 관리 */}
+                                <div className="p-6 border-t-2 border-gray-100">
+                                    <h3 className="text-lg font-bold mb-4" style={{ color: themeColor }}>🏖️ 휴가 관리</h3>
+                                    <div className="flex gap-2 flex-wrap mb-4">
+                                        <select id="vw" className="border-2 border-gray-300 p-2 rounded-lg">{allWorkers.map(w => <option key={w} value={w}>{w}</option>)}</select>
+                                        <input type="date" id="vd" className="border-2 border-gray-300 p-2 rounded-lg" />
+                                        <button onClick={() => { const w = document.getElementById('vw').value, d = document.getElementById('vd').value; if (w && d) { setVacations(p => ({ ...p, [w]: [...(p[w] || []), d] })); showToast(`${w} 휴가: ${d}`); addHistory(`${w} 휴가: ${d}`); } }} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold">+ 등록</button>
+                                    </div>
+                                    {Object.entries(vacations).filter(([, d]) => d.length > 0).map(([w, d]) => <div key={w} className="bg-yellow-50 p-2 rounded border border-yellow-200 mb-2 flex justify-between"><span><b className="text-yellow-700">{w}:</b> {d.join(', ')}</span><button onClick={() => setVacations(p => ({ ...p, [w]: [] }))} className="text-red-500 text-sm">삭제</button></div>)}
+                                </div>
+
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Stats Modal */}
+                    {showStats && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                                <div style={{ backgroundColor: themeColor }} className="text-white p-4 flex justify-between items-center">
+                                    <h2 className="text-xl font-bold">📊 근무 통계 - {year}년 {monthNames[month]}</h2>
+                                    <button onClick={() => setShowStats(false)} className="text-2xl">✕</button>
+                                </div>
+                                <div className="p-6">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full border-collapse">
+                                            <thead>
+                                                <tr className="bg-gray-100">
+                                                    <th className="border border-gray-300 px-4 py-2 text-left">근무자</th>
+                                                    <th className="border border-gray-300 px-4 py-2 text-center">총 근무일</th>
+                                                    <th className="border border-gray-300 px-4 py-2 text-center">전반</th>
+                                                    <th className="border border-gray-300 px-4 py-2 text-center">후반</th>
+                                                    <th className="border border-gray-300 px-4 py-2 text-center">주간</th>
+                                                    <th className="border border-gray-300 px-4 py-2 text-center">야간</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {allWorkers.map(worker => {
+                                                    const stat = calculateStats[worker];
+                                                    return (
+                                                        <tr key={worker} className="hover:bg-gray-50">
+                                                            <td className="border border-gray-300 px-4 py-2 font-semibold">{worker}</td>
+                                                            <td className="border border-gray-300 px-4 py-2 text-center font-bold text-lg">{stat.total}</td>
+                                                            <td className="border border-gray-300 px-4 py-2 text-center text-blue-700">{stat.am}</td>
+                                                            <td className="border border-gray-300 px-4 py-2 text-center text-green-600">{stat.pm}</td>
+                                                            <td className="border border-gray-300 px-4 py-2 text-center text-yellow-600">{stat.dayShift}</td>
+                                                            <td className="border border-gray-300 px-4 py-2 text-center text-indigo-600">{stat.nightShift}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr className="bg-gray-200 font-bold">
+                                                    <td className="border border-gray-300 px-4 py-2">합계</td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        {Object.values(calculateStats).reduce((sum, stat) => sum + stat.total, 0)}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center text-blue-700">
+                                                        {Object.values(calculateStats).reduce((sum, stat) => sum + stat.am, 0)}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center text-green-600">
+                                                        {Object.values(calculateStats).reduce((sum, stat) => sum + stat.pm, 0)}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center text-yellow-600">
+                                                        {Object.values(calculateStats).reduce((sum, stat) => sum + stat.dayShift, 0)}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center text-indigo-600">
+                                                        {Object.values(calculateStats).reduce((sum, stat) => sum + stat.nightShift, 0)}
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* History Modal */}
+                    {showHistory && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                            <div className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto">
+                                <div style={{ backgroundColor: themeColor }} className="text-white p-4 flex justify-between items-center">
+                                    <h2 className="text-xl font-bold">📜 변경 이력</h2>
+                                    <button onClick={() => setShowHistory(false)} className="text-2xl">✕</button>
+                                </div>
+                                <div className="p-4">
+                                    {history.length === 0 ? (
+                                        <p className="text-gray-500 text-center py-8">변경 이력이 없습니다.</p>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {history.map((entry, idx) => (
+                                                <div key={idx} className="bg-gray-50 p-3 rounded-lg border">
+                                                    <div className="text-xs text-gray-400">{new Date(entry.time).toLocaleString()}</div>
+                                                    <div className="text-sm text-gray-700">{entry.action}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Toast Container */}
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none w-full max-w-md px-4">
+                        {toasts.map(toast => (
+                            <div
+                                key={toast.id}
+                                className={`px-6 py-3 rounded-xl shadow-2xl text-white font-bold animate-toast pointer-events-auto text-center ${toast.type === 'error' ? 'bg-red-500' : 'bg-[#003D82] border border-cyan-400'
+                                    }`}
+                            >
+                                {toast.message}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+
+</html>
