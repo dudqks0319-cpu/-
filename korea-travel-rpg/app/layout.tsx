@@ -19,6 +19,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap"
+        />
+      </head>
       <body className="bg-warm min-h-screen font-sans">
         {children}
       </body>

@@ -10,15 +10,10 @@ interface PlayerInfoBarProps {
   totalStamps: number;
 }
 
-function getLevelTitle(level: number): string {
+function getTitle(level: number): string {
   if (level >= 7) return '전국일주 도전자';
   if (level >= 4) return '중급 탐험가';
   return '초보 여행자';
-}
-
-function getExpPercentage(exp: number, level: number): number {
-  const requiredExp = level * 30;
-  return Math.min((exp / requiredExp) * 100, 100);
 }
 
 export default function PlayerInfoBar({
@@ -31,48 +26,56 @@ export default function PlayerInfoBar({
   totalStamps,
 }: PlayerInfoBarProps) {
   const avatar = gender === 'male' ? '🧑' : '👩';
-  const title = getLevelTitle(level);
-  const expPercent = getExpPercentage(exp, level);
+  const title = getTitle(level);
+  const expForNextLevel = level * 100;
+  const expPercent = Math.min((exp / expForNextLevel) * 100, 100);
 
   return (
-    <div className="bg-white shadow-md px-3 py-2 sm:px-4 sm:py-3 rounded-b-xl">
-      <div className="flex items-center gap-2 sm:gap-3 max-w-lg mx-auto">
-        {/* 캐릭터 + 이름 */}
-        <div className="flex items-center gap-1 min-w-0">
-          <span className="text-xl sm:text-2xl">{avatar}</span>
-          <div className="min-w-0">
-            <p className="text-xs sm:text-sm font-bold truncate">{name}</p>
-            <p className="text-[10px] sm:text-xs text-gray-500">
-              Lv.{level} {title}
-            </p>
-          </div>
-        </div>
+    <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md px-3 py-2 sm:px-4 rounded-b-xl">
+      <div className="flex items-center gap-2 sm:gap-3 max-w-lg mx-auto text-xs sm:text-sm">
+        <span className="flex items-center gap-1 shrink-0">
+          <span className="text-lg sm:text-xl">{avatar}</span>
+          <span className="font-bold truncate max-w-[60px] sm:max-w-[80px]">{name}</span>
+        </span>
 
-        {/* 경험치 바 */}
-        <div className="flex-1 min-w-0">
-          <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
+        <span className="text-gray-300">|</span>
+
+        <span className="shrink-0">
+          <span className="font-bold text-primary">Lv.{level}</span>
+          <span className="ml-1 text-gray-500 text-[10px] sm:text-xs">{title}</span>
+        </span>
+
+        <span className="text-gray-300 hidden sm:inline">|</span>
+
+        <div className="flex-1 min-w-[48px] hidden sm:block">
+          <div className="bg-gray-200 h-2 rounded-full overflow-hidden">
             <div
               className="bg-primary h-full rounded-full transition-all duration-500"
               style={{ width: `${expPercent}%` }}
             />
           </div>
-          <p className="text-[10px] text-gray-400 text-center mt-0.5">
-            EXP {exp}/{level * 30}
-          </p>
         </div>
 
-        {/* 코인 */}
-        <div className="text-center">
-          <p className="text-xs sm:text-sm font-bold text-gold">
-            💰 {coins}
-          </p>
-        </div>
+        <span className="text-gray-300">|</span>
 
-        {/* 스탬프 */}
-        <div className="text-center">
-          <p className="text-xs sm:text-sm font-bold text-primary">
-            🏅 {stamps}/{totalStamps}
-          </p>
+        <span className="shrink-0 font-bold text-gold">
+          💰 {coins}
+          <span className="hidden sm:inline"> TRAVEL</span>
+        </span>
+
+        <span className="text-gray-300">|</span>
+
+        <span className="shrink-0 font-bold">
+          🏅 {stamps}/{totalStamps}
+        </span>
+      </div>
+
+      <div className="sm:hidden mt-1 max-w-lg mx-auto">
+        <div className="bg-gray-200 h-1.5 rounded-full overflow-hidden">
+          <div
+            className="bg-primary h-full rounded-full transition-all duration-500"
+            style={{ width: `${expPercent}%` }}
+          />
         </div>
       </div>
     </div>

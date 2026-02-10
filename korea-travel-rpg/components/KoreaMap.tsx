@@ -1,92 +1,226 @@
 'use client';
 
-interface CityMarkerData {
-  id: string;
-  name: string;
-  mapPosition: { x: number; y: number };
-  themeColor: string;
-  isUnlocked: boolean;
-  isCompleted: boolean;
-  completedMissions: number;
-  totalMissions: number;
-}
-
 interface KoreaMapProps {
-  cities: CityMarkerData[];
+  cities: Array<{
+    id: string;
+    name: string;
+    mapPosition: { x: number; y: number };
+    themeColor: string;
+    isUnlocked: boolean;
+    isCompleted: boolean;
+    completedMissions: number;
+    totalMissions: number;
+  }>;
   onCityClick: (cityId: string) => void;
 }
 
 export default function KoreaMap({ cities, onCityClick }: KoreaMapProps) {
   return (
-    <div className="w-full max-w-md mx-auto relative game-touch">
-      <svg viewBox="0 0 400 520" className="w-full h-auto drop-shadow-lg">
-        {/* 바다 배경 */}
-        <rect width="400" height="520" fill="#BFDBFE" rx="20" />
+    <div className="w-full max-w-lg mx-auto game-touch">
+      <svg
+        viewBox="0 0 800 1000"
+        className="w-full h-auto"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <filter id="marker-shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.25" />
+          </filter>
+        </defs>
 
-        {/* 한반도 남한 본토 */}
+        <style>{`
+          .city-active {
+            cursor: pointer;
+          }
+          .city-active:hover .marker-main {
+            r: 30;
+          }
+          .marker-main {
+            transition: r 0.2s ease;
+          }
+        `}</style>
+
+        <rect width="800" height="1000" fill="#BFDBFE" rx="16" />
+
         <path
-          d="M 170 30 L 200 25 L 230 30 L 255 28 L 270 35 L 280 50 L 290 55
-             L 295 70 L 285 85 L 280 95 L 275 100 L 290 110 L 295 120
-             L 290 135 L 280 145 L 275 155 L 270 165 L 265 180
-             L 260 195 L 265 210 L 270 225 L 280 240 L 290 260
-             L 300 275 L 310 290 L 315 310 L 310 325 L 300 340
-             L 290 350 L 280 355 L 270 360 L 255 355 L 240 350
-             L 225 355 L 210 365 L 195 370 L 180 365 L 165 355
-             L 150 340 L 140 325 L 130 310 L 120 290 L 115 270
-             L 110 250 L 105 230 L 100 210 L 105 190 L 110 170
-             L 115 155 L 120 140 L 115 125 L 110 110 L 115 95
-             L 125 80 L 135 65 L 145 50 L 155 40 Z"
+          d={`
+            M 275 178
+            C 310 168, 380 158, 450 162
+            C 520 166, 565 178, 592 192
+            C 610 206, 616 235, 618 270
+            C 622 325, 625 385, 624 440
+            C 623 495, 618 540, 610 575
+            C 602 608, 590 635, 572 655
+            C 552 675, 525 682, 498 678
+            C 470 674, 445 664, 420 656
+            C 395 648, 375 654, 350 664
+            C 322 676, 295 668, 275 654
+            C 252 638, 240 614, 236 585
+            C 232 555, 236 528, 244 500
+            C 252 472, 262 446, 272 420
+            C 280 395, 280 372, 276 348
+            C 272 324, 266 302, 260 282
+            C 254 262, 248 244, 250 230
+            C 254 218, 270 208, 296 202
+            C 322 196, 340 196, 352 206
+            C 346 198, 330 188, 310 182
+            C 292 176, 280 176, 275 178
+            Z
+          `}
           fill="#86EFAC"
           stroke="#059669"
-          strokeWidth="2"
+          strokeWidth="2.5"
         />
 
-        {/* 제주도 */}
         <path
-          d="M 135 440 L 155 432 L 175 430 L 195 432 L 215 438
-             L 225 448 L 220 458 L 205 465 L 185 468 L 165 465
-             L 145 458 L 135 450 Z"
+          d={`
+            M 260 360
+            C 252 362, 242 358, 237 366
+            C 232 374, 238 382, 246 383
+            C 254 384, 260 376, 260 368
+            Z
+          `}
           fill="#86EFAC"
           stroke="#059669"
-          strokeWidth="2"
+          strokeWidth="1.5"
         />
 
-        {/* 도시 마커 */}
+        <path
+          d={`
+            M 480 685
+            C 486 678, 498 677, 505 684
+            C 512 691, 504 700, 494 700
+            C 484 700, 474 692, 480 685
+            Z
+          `}
+          fill="#86EFAC"
+          stroke="#059669"
+          strokeWidth="1.5"
+        />
+
+        <path
+          d={`
+            M 442 692
+            C 448 686, 460 685, 465 692
+            C 470 699, 462 706, 453 705
+            C 444 704, 437 698, 442 692
+            Z
+          `}
+          fill="#86EFAC"
+          stroke="#059669"
+          strokeWidth="1.5"
+        />
+
+        <ellipse
+          cx="310"
+          cy="820"
+          rx="65"
+          ry="28"
+          fill="#86EFAC"
+          stroke="#059669"
+          strokeWidth="2.5"
+        />
+
+        <ellipse
+          cx="392"
+          cy="836"
+          rx="12"
+          ry="7"
+          fill="#86EFAC"
+          stroke="#059669"
+          strokeWidth="1.5"
+        />
+
         {cities.map((city) => {
-          const cx = city.mapPosition.x * 4;
-          const cy = city.mapPosition.y * 5;
-          const isJeju = city.id === 'jeju';
-          const finalCy = isJeju ? 450 : cy;
-          const finalCx = isJeju ? 180 : cx;
+          const { x, y } = city.mapPosition;
 
-          if (!city.isUnlocked) {
+          if (city.isCompleted) {
             return (
-              <g key={city.id} className="cursor-not-allowed">
+              <g
+                key={city.id}
+                className="city-active"
+                onClick={() => onCityClick(city.id)}
+                filter="url(#marker-shadow)"
+              >
                 <circle
-                  cx={finalCx}
-                  cy={finalCy}
-                  r={18}
-                  fill="#94A3B8"
-                  stroke="#64748B"
-                  strokeWidth="2"
-                  opacity={0.6}
+                  cx={x}
+                  cy={y}
+                  r={25}
+                  fill={city.themeColor}
+                  stroke="white"
+                  strokeWidth="3"
+                  className="marker-main"
                 />
                 <text
-                  x={finalCx}
-                  y={finalCy + 4}
+                  x={x}
+                  y={y + 7}
                   textAnchor="middle"
-                  fontSize="12"
-                  fill="white"
+                  fontSize="18"
                 >
-                  🔒
+                  ✅
                 </text>
                 <text
-                  x={finalCx}
-                  y={finalCy + 34}
+                  x={x}
+                  y={y + 48}
                   textAnchor="middle"
-                  fontSize="11"
-                  fill="#94A3B8"
-                  fontWeight="bold"
+                  fontSize="16"
+                  fill="#1E293B"
+                  fontWeight="600"
+                >
+                  {city.name}
+                </text>
+              </g>
+            );
+          }
+
+          if (city.isUnlocked) {
+            return (
+              <g
+                key={city.id}
+                className="city-active"
+                onClick={() => onCityClick(city.id)}
+                filter="url(#marker-shadow)"
+              >
+                <circle cx={x} cy={y} r={25} fill={city.themeColor} opacity="0.3">
+                  <animate
+                    attributeName="r"
+                    values="25;40;25"
+                    dur="2.5s"
+                    repeatCount="indefinite"
+                  />
+                  <animate
+                    attributeName="opacity"
+                    values="0.5;0.1;0.5"
+                    dur="2.5s"
+                    repeatCount="indefinite"
+                  />
+                </circle>
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={25}
+                  fill={city.themeColor}
+                  stroke="white"
+                  strokeWidth="3"
+                  className="marker-main"
+                />
+                <text
+                  x={x}
+                  y={y + 5}
+                  textAnchor="middle"
+                  fontSize="13"
+                  fill="white"
+                  fontWeight="700"
+                >
+                  {city.completedMissions}/{city.totalMissions}
+                </text>
+                <text
+                  x={x}
+                  y={y + 48}
+                  textAnchor="middle"
+                  fontSize="16"
+                  fill="#1E293B"
+                  fontWeight="600"
                 >
                   {city.name}
                 </text>
@@ -97,81 +231,31 @@ export default function KoreaMap({ cities, onCityClick }: KoreaMapProps) {
           return (
             <g
               key={city.id}
-              onClick={() => onCityClick(city.id)}
               className="cursor-pointer"
-              role="button"
-              tabIndex={0}
+              onClick={() => onCityClick(city.id)}
+              opacity={0.6}
             >
-              {/* 펄스 애니메이션 (열린 미완료 도시) */}
-              {!city.isCompleted && (
-                <circle
-                  cx={finalCx}
-                  cy={finalCy}
-                  r={22}
-                  fill={city.themeColor}
-                  opacity={0.3}
-                >
-                  <animate
-                    attributeName="r"
-                    values="22;28;22"
-                    dur="2s"
-                    repeatCount="indefinite"
-                  />
-                  <animate
-                    attributeName="opacity"
-                    values="0.3;0.1;0.3"
-                    dur="2s"
-                    repeatCount="indefinite"
-                  />
-                </circle>
-              )}
-
-              {/* 메인 원 */}
               <circle
-                cx={finalCx}
-                cy={finalCy}
-                r={18}
-                fill={city.themeColor}
-                stroke="white"
-                strokeWidth="3"
-                className="transition-transform duration-200 hover:scale-110"
-                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}
+                cx={x}
+                cy={y}
+                r={25}
+                fill="#94A3B8"
+                stroke="#64748B"
+                strokeWidth="2"
               />
-
-              {/* 완료 체크마크 또는 진행도 */}
-              <text
-                x={finalCx}
-                y={finalCy + 5}
-                textAnchor="middle"
-                fontSize="14"
-                fill="white"
-              >
-                {city.isCompleted ? '✅' : `${city.completedMissions}/${city.totalMissions}`}
+              <text x={x} y={y + 7} textAnchor="middle" fontSize="18">
+                🔒
               </text>
-
-              {/* 도시 이름 */}
               <text
-                x={finalCx}
-                y={finalCy + 34}
+                x={x}
+                y={y + 48}
                 textAnchor="middle"
-                fontSize="12"
-                fill="#1E293B"
-                fontWeight="bold"
+                fontSize="16"
+                fill="#64748B"
+                fontWeight="500"
               >
                 {city.name}
               </text>
-
-              {/* 완료 도시 왕관 */}
-              {city.isCompleted && (
-                <text
-                  x={finalCx}
-                  y={finalCy - 22}
-                  textAnchor="middle"
-                  fontSize="14"
-                >
-                  👑
-                </text>
-              )}
             </g>
           );
         })}
