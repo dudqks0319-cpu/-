@@ -182,7 +182,16 @@ function sawBlock(x,y,w,h){
 
 /* ---------- 장면 ---------- */
 function s1(t){ // 새벽 수확
-  if(photo('hero',0,0,W,H,t)){const g=ctx.createLinearGradient(0,0,W*.7,0);g.addColorStop(0,'rgba(234,240,225,.95)');g.addColorStop(1,'rgba(234,240,225,0)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}
+  if(IMG.hero){
+    sky(t,'#fbf1d4',C.mist);
+    sun(W*.9,lerp(H*.5,H*.14,eOut(seg(t,0,4))),60,t,.8);
+    hills(t,H*.62,['#bcd3a8','#9dbf86','#6f9d5c'],40,5);
+    const p=eOut(seg(t,.2,1.2)), fx=W*.53, fy=H*.08+(1-p)*80, fw=W*.4, fh=H*.84;
+    ctx.save();ctx.globalAlpha=p;ctx.translate(fx+fw/2,fy+fh/2);ctx.rotate(lerp(.05,.015,p));ctx.translate(-(fx+fw/2),-(fy+fh/2));
+    ctx.shadowColor='rgba(31,58,43,.35)';ctx.shadowBlur=50;ctx.shadowOffsetY=20;ctx.fillStyle=C.white;rr(fx-16,fy-16,fw+32,fh+32,30);ctx.fill();ctx.shadowColor='transparent';
+    photo('hero',fx,fy,fw,fh,t,20);ctx.restore();
+    dew(t,.6);
+  }
   else{
     sky(t,'#fbf1d4',C.mist);
     sun(W*.78,lerp(H*.62,H*.26,eOut(seg(t,0,4))),70,t);
