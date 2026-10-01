@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LocalPick Korea</title>
+<meta name="description" content="Where Koreans actually eat, drink and go in Seoul, Busan, Jeonju and Gyeongju.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+JP:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;600&display=swap">
+<style>
+/* Layout: phone-first single column, sticky top bar, cards keyed to a "locals vs tourists" meter */
+:root {
+  --bg: #f3f5f2;
+  --surface: #ffffff;
+  --ink: #15211d;
+  --muted: #5b6b65;
+  --line: #dbe2de;
+  --local: #0d7f61;
+  --local-soft: #d9efe7;
+  --tourist: #b97a12;
+  --tourist-soft: #f6ead2;
+  --c-seoul: #3557c9;
+  --c-busan: #0a7f99;
+  --c-jeonju: #a8532a;
+  --c-gyeongju: #7247a6;
+  --shadow: 0 1px 2px rgba(21, 33, 29, .06), 0 4px 16px rgba(21, 33, 29, .06);
+  --display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "IBM Plex Sans JP", "IBM Plex Sans KR", "Hiragino Sans", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --kr: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1513; --surface: #17201d; --ink: #e5ece9; --muted: #9aaba5; --line: #2a3632;
+    --local: #3cc59c; --local-soft: #173a30; --tourist: #e3ac4c; --tourist-soft: #3a2f19;
+    --c-seoul: #7c97f2; --c-busan: #4fc1d8; --c-jeonju: #e08a62; --c-gyeongju: #b28ce4;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1513; --surface: #17201d; --ink: #e5ece9; --muted: #9aaba5; --line: #2a3632;
+  --local: #3cc59c; --local-soft: #173a30; --tourist: #e3ac4c; --tourist-soft: #3a2f19;
+  --c-seoul: #7c97f2; --c-busan: #4fc1d8; --c-jeonju: #e08a62; --c-gyeongju: #b28ce4;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font: inherit; color: inherit; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--local); outline-offset: 2px; border-radius: 6px; }
+.kr { font-family: var(--kr); }
+
+/* ── top bar ── */
+.bar {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.bar-in {
+  max-width: 560px; margin: 0 auto;
+  padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.brand {
+  display: flex; align-items: baseline; gap: 8px;
+  text-decoration: none;
+  font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: -.01em;
+}
+.brand .pin { color: var(--local); }
+.brand small { font-family: var(--kr); font-weight: 400; font-size: 12px; color: var(--muted); }
+.lang {
+  display: inline-flex; padding: 3px; gap: 2px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+}
+.lang button {
+  border: 0; background: transparent; cursor: pointer;
+  padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--muted);
+}
+.lang button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+/* ── page ── */
+main { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 20px 48px; }
+.view { display: grid; gap: 28px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+.hero h1 {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(34px, 9vw, 46px); line-height: 1.02; letter-spacing: -.025em;
+}
+.hero h1 em { font-style: normal; color: var(--local); }
+.hero p { margin: 12px 0 0; color: var(--muted); max-width: 40ch; }
+.eyebrow {
+  font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
+.sec { display: grid; gap: 12px; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sec-head h2 { font-family: var(--display); font-weight: 600; font-size: 22px; letter-spacing: -.01em; }
+
+/* search */
+.search { position: relative; }
+.search input {
+  width: 100%; padding: 13px 14px 13px 42px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  font-size: 16px;
+}
+.search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+
+/* cities */
+.cities { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.city {
+  display: grid; gap: 6px; align-content: start;
+  padding: 14px; min-height: 132px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  text-decoration: none; position: relative; overflow: hidden;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.city:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.city .stop {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 4px solid var(--city); background: var(--surface);
+}
+.city h3 { font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: -.01em; line-height: 1.1; }
+.city h3 .kr { font-weight: 400; font-size: 13px; color: var(--muted); margin-left: 4px; }
+.city p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
+.city .count { font-size: 12px; font-weight: 600; color: var(--city); }
+
+/* swaps: "instead of → try" */
+.swaps { display: grid; gap: 8px; }
+.swap {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px;
+  padding: 12px 14px; width: 100%; text-align: left; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+}
+.swap .from { color: var(--muted); font-size: 13px; text-decoration: line-through; text-decoration-color: var(--tourist); min-width: 0; }
+.swap .to { font-weight: 600; font-size: 14px; min-width: 0; }
+.swap .to small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.swap .arrow { color: var(--local); }
+
+/* shopping teaser */
+.teaser {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px;
+  padding: 16px; border-radius: var(--radius); text-decoration: none;
+  background: var(--local-soft); border: 1px solid color-mix(in srgb, var(--local) 25%, transparent);
+}
+.teaser h3 { font-family: var(--display); font-weight: 600; font-size: 19px; }
+.teaser p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.teaser .go { font-size: 22px; color: var(--local); }
+
+/* city header */
+.back {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+  font-size: 14px; color: var(--muted);
+}
+.city-head { display: grid; gap: 8px; }
+.city-head .line-rule { height: 6px; border-radius: 3px; background: var(--city); width: 64px; }
+.city-head h1 { font-family: var(--display); font-weight: 800; font-size: 40px; letter-spacing: -.02em; line-height: 1; }
+.city-head h1 .kr { font-weight: 400; font-size: 18px; color: var(--muted); margin-left: 8px; letter-spacing: 0; }
+.city-head p { margin: 0; color: var(--muted); }
+
+/* category chips */
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; margin: 0 -16px; padding-inline: 16px; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none; text-decoration: none; padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); font-size: 14px; font-weight: 500;
+}
+.chip[aria-current="page"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip .n { color: var(--muted); font-weight: 400; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.chip[aria-current="page"] .n { color: inherit; opacity: .7; }
+
+/* place cards */
+.list { display: grid; gap: 10px; }
+.card {
+  display: grid; gap: 10px; width: 100%; text-align: left; cursor: pointer;
+  padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.card:hover { box-shadow: var(--shadow); border-color: color-mix(in srgb, var(--local) 35%, var(--line)); }
+.card-top { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.card h3 { font-size: 17px; font-weight: 600; line-height: 1.3; }
+.card .ko { font-family: var(--kr); font-size: 13px; color: var(--muted); }
+.card .why { margin: 0; font-size: 14px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card .meta { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--muted); }
+.card .city-tag { font-weight: 600; color: var(--city); }
+.price { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; color: var(--ink); white-space: nowrap; }
+
+/* local meter */
+.meter { display: grid; gap: 5px; }
+.meter-label { display: flex; justify-content: space-between; font-size: 12px; }
+.meter-label .tag { font-weight: 600; color: var(--local); }
+.meter-label .tag.mixed { color: var(--tourist); }
+.meter-bars { display: grid; grid-template-columns: auto 1fr; gap: 3px 8px; align-items: center; font-size: 11px; color: var(--muted); }
+.dots { display: flex; gap: 3px; }
+.dots i { width: 100%; max-width: 22px; height: 6px; border-radius: 3px; background: var(--line); flex: 1; }
+.dots.l i.on { background: var(--local); }
+.dots.t i.on { background: var(--tourist); }
+
+.empty { padding: 24px; text-align: center; color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); }
+
+/* shopping */
+.shop-tips { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.shop-tips li {
+  padding: 12px 14px; background: var(--tourist-soft); border-radius: 12px; font-size: 14px;
+}
+.shop-list { display: grid; gap: 8px; counter-reset: rank; }
+.shop {
+  display: grid; grid-template-columns: 32px 1fr auto; gap: 12px; align-items: center;
+  padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+}
+.shop::before {
+  counter-increment: rank; content: counter(rank);
+  font-family: var(--display); font-weight: 800; font-size: 22px; color: var(--local); text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.shop h3 { font-size: 15px; font-weight: 600; }
+.shop p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.mini-btn {
+  border: 1px solid var(--line); background: var(--bg); border-radius: 10px; cursor: pointer;
+  padding: 6px 10px; font-size: 12px; font-weight: 500; white-space: nowrap;
+}
+
+footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40px; font-size: 12px; color: var(--muted); }
+
+/* ── bottom sheet ── */
+.scrim {
+  position: fixed; inset: 0; z-index: 20; background: rgba(8, 14, 12, .45);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.sheet {
+  width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto;
+  background: var(--surface); border-radius: 20px 20px 0 0;
+  padding: 10px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  display: grid; gap: 18px;
+  animation: up .22s ease-out;
+}
+@keyframes up { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+.grab { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto; }
+.sheet-head { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+.sheet h2 { font-family: var(--display); font-weight: 800; font-size: 26px; line-height: 1.1; letter-spacing: -.015em; }
+.sheet .ko-big { font-family: var(--kr); font-size: 17px; color: var(--muted); margin-top: 4px; }
+.x {
+  flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--bg); cursor: pointer; font-size: 18px; line-height: 1;
+}
+.sheet .sub { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+.sheet h4 { margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.sheet p { margin: 0; }
+.sheet ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.instead {
+  display: flex; gap: 10px; align-items: center; padding: 12px 14px;
+  background: var(--tourist-soft); border-radius: 12px; font-size: 14px;
+}
+.instead s { text-decoration-color: var(--tourist); }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 13px 14px; border-radius: 12px; cursor: pointer; text-decoration: none;
+  font-weight: 600; font-size: 15px; border: 1px solid var(--line); background: var(--bg);
+}
+.btn.primary { background: var(--local); color: #fff; border-color: var(--local); }
+:root[data-theme="dark"] .btn.primary { color: #06140f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary { color: #06140f; } }
+.btn.wide { grid-column: 1 / -1; }
+
+/* ── show-to-staff screen ── */
+.staff {
+  position: fixed; inset: 0; z-index: 30; background: var(--bg);
+  display: grid; grid-template-rows: auto 1fr auto; padding: 16px;
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+.staff-top { display: flex; justify-content: space-between; align-items: center; }
+.slip {
+  align-self: center; justify-self: center; width: 100%; max-width: 520px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 28px 22px;
+  display: grid; gap: 18px; text-align: center; box-shadow: var(--shadow);
+}
+.slip .to-staff { font-family: var(--kr); font-size: 15px; color: var(--muted); }
+.slip .big { font-family: var(--kr); font-weight: 600; font-size: clamp(30px, 8.5vw, 44px); line-height: 1.3; word-break: keep-all; }
+.slip .place { font-family: var(--kr); font-size: 15px; color: var(--local); font-weight: 600; }
+.slip .mean { font-size: 14px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="#" aria-label="LocalPick Korea home"><span>Local<span class="pin">Pick</span></span><small>로컬픽</small></a>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" id="lang-en" data-lang="en">EN</button>
+      <button type="button" id="lang-ja" data-lang="ja">日本語</button>
+    </div>
+  </div>
+</header>
+
+<main id="app"></main>
+<footer id="foot"></footer>
+
+<div class="scrim" id="sheet-scrim" hidden>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"></div>
+</div>
+
+<div class="staff" id="staff" role="dialog" aria-modal="true" aria-label="Show to staff" hidden></div>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  'use strict';
+  var D = window.LP_DATA;
+
+  /* ── UI text in English and Japanese ── */
+  var T = {
+    en: {
+      heroA: 'Travel Korea', heroB: 'like a local.',
+      heroP: 'Where Koreans actually eat, drink and hang out in Seoul, Busan, Jeonju and Gyeongju.',
+      search: 'Search places, food, neighborhoods',
+      cities: 'Pick a city', picks: function (n) { return n + ' local picks'; },
+      swaps: 'Skip the tourist version', swapsSub: 'What locals do instead',
+      shopTitle: 'Olive Young list', shopSub: 'What Koreans actually rebuy, plus how to save.',
+      back: 'All cities', all: 'All',
+      locals: 'Locals', tourists: 'Tourists',
+      hidden: 'Hidden local spot', fav: 'Local favorite', both: 'Loved by everyone',
+      why: 'Why locals go', tips: 'Local tips', insteadOf: 'Instead of',
+      map: 'Open in Naver Map', staff: 'Show to staff', copy: 'Copy Korean name', copied: 'Copied',
+      close: 'Close', staffTop: 'Show this screen to the staff',
+      price: { '₩': 'Under ₩10,000', '₩₩': '₩10,000–30,000', '₩₩₩': '₩30,000+', 'free': 'Free' },
+      noResults: 'No places match that search yet.',
+      results: function (n) { return n + (n === 1 ? ' place' : ' places'); },
+      shopTips: 'Before you shop', shopTop: 'Top picks', whereIs: 'Where is this?',
+      foot: 'Hours and prices change. Check Naver Map before you go.',
+      naverNote: 'Naver Map is the map app Koreans use. Google Maps walking directions are limited in Korea.'
+    },
+    ja: {
+      heroA: '韓国を、', heroB: '地元の人みたいに。',
+      heroP: 'ソウル・釜山・全州・慶州で、韓国人が本当に食べて、飲んで、遊んでいる場所。',
+      search: '場所・料理・エリアで検索',
+      cities: '都市を選ぶ', picks: function (n) { return '地元のおすすめ ' + n + '件'; },
+      swaps: '観光地の定番より、こっち', swapsSub: '地元の人の選び方',
+      shopTitle: 'オリーブヤング購入リスト', shopSub: '韓国人がリピートする定番とお得な買い方。',
+      back: 'すべての都市', all: 'すべて',
+      locals: '地元客', tourists: '観光客',
+      hidden: '地元民の穴場', fav: '地元で人気', both: 'みんなに人気',
+      why: '地元の人が行く理由', tips: '地元のコツ', insteadOf: 'こちらの代わりに',
+      map: 'NAVERマップで開く', staff: 'お店の人に見せる', copy: '韓国語名をコピー', copied: 'コピーしました',
+      close: '閉じる', staffTop: 'この画面をお店の人に見せてください',
+      price: { '₩': '1万ウォン未満', '₩₩': '1〜3万ウォン', '₩₩₩': '3万ウォン以上', 'free': '無料' },
+      noResults: '該当する場所はまだありません。',
+      results: function (n) { return n + '件'; },
+      shopTips: '買い物の前に', shopTop: 'おすすめ', whereIs: 'どこにありますか？',
+      foot: '営業時間や価格は変わることがあります。お出かけ前にNAVERマップで確認を。',
+      naverNote: 'NAVERマップは韓国人が使う地図アプリ。韓国ではGoogleマップの徒歩ルートが使えません。'
+    }
+  };
+
+  /* ── language ── */
+  var lang = 'en';
+  try {
+    var saved = localStorage.getItem('lp-lang');
+    if (saved === 'en' || saved === 'ja') lang = saved;
+    else if ((navigator.language || '').toLowerCase().indexOf('ja') === 0) lang = 'ja';
+  } catch (e) {
+    if ((navigator.language || '').toLowerCase().indexOf('ja') === 0) lang = 'ja';
+  }
+  function t(key) { return T[lang][key]; }
+  function L(obj) { return obj ? (obj[lang] || obj.en || '') : ''; }
+
+  function setLang(next) {
+    lang = next;
+    try { localStorage.setItem('lp-lang', next); } catch (e) {}
+    document.documentElement.lang = next;
+    document.getElementById('lang-en').setAttribute('aria-pressed', String(next === 'en'));
+    document.getElementById('lang-ja').setAttribute('aria-pressed', String(next === 'ja'));
+    render();
+    if (openPlaceId) openSheet(openPlaceId);
+  }
+
+  /* ── helpers ── */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function city(id) { return D.cities.filter(function (c) { return c.id === id; })[0]; }
+  function place(id) { return D.places.filter(function (p) { return p.id === id; })[0]; }
+  function placesIn(cityId, cat) {
+    return D.places.filter(function (p) { return p.city === cityId && (!cat || p.cat === cat); });
+  }
+  function cityColor(id) { return 'var(--c-' + id + ')'; }
+  function naverUrl(q) { return 'https://map.naver.com/p/search/' + encodeURIComponent(q); }
+
+  function verdict(p) {
+    var d = p.locals - p.tourists;
+    if (d >= 3) return { text: t('hidden'), cls: '' };
+    if (d >= 1) return { text: t('fav'), cls: '' };
+    return { text: t('both'), cls: 'mixed' };
+  }
+  function dots(n, cls) {
+    var h = '<span class="dots ' + cls + '" aria-hidden="true">';
+    for (var i = 1; i <= 5; i++) h += '<i class="' + (i <= n ? 'on' : '') + '"></i>';
+    return h + '</span>';
+  }
+  function meter(p) {
+    var v = verdict(p);
+    return '<div class="meter" aria-label="' + esc(t('locals') + ' ' + p.locals + '/5, ' + t('tourists') + ' ' + p.tourists + '/5') + '">' +
+      '<div class="meter-label"><span class="tag ' + v.cls + '">' + esc(v.text) + '</span></div>' +
+      '<div class="meter-bars">' +
+        '<span>' + esc(t('locals')) + '</span>' + dots(p.locals, 'l') +
+        '<span>' + esc(t('tourists')) + '</span>' + dots(p.tourists, 't') +
+      '</div></div>';
+  }
+
+  var ICON_SEARCH = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
+  var ICON_PIN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+
+  function placeCard(p, showCity) {
+    var c = city(p.city);
+    return '<button type="button" class="card" data-place="' + esc(p.id) + '" style="--city:' + cityColor(p.city) + '">' +
+      '<div class="card-top"><div><h3>' + esc(L(p.name)) + '</h3><div class="ko">' + esc(p.ko) + '</div></div>' +
+      '<span class="price">' + esc(p.price === 'free' ? t('price').free : p.price) + '</span></div>' +
+      '<p class="why">' + esc(L(p.why)) + '</p>' +
+      meter(p) +
+      '<div class="meta">' + (showCity ? '<span class="city-tag">' + esc(L(c)) + '</span>' : '') + '<span>' + esc(L(p.area)) + '</span></div>' +
+    '</button>';
+  }
+
+  /* ── views ── */
+  var searchText = '';
+
+  function viewHome() {
+    var h = '<div class="view">';
+    h += '<section class="hero"><h1>' + esc(t('heroA')) + '<br><em>' + esc(t('heroB')) + '</em></h1><p>' + esc(t('heroP')) + '</p></section>';
+    h += '<div class="search">' + ICON_SEARCH + '<input id="q" type="search" autocomplete="off" placeholder="' + esc(t('search')) + '" aria-label="' + esc(t('search')) + '" value="' + esc(searchText) + '"></div>';
+    h += '<div id="home-body">' + homeBody() + '</div>';
+    return h + '</div>';
+  }
+
+  function homeBody() {
+    if (searchText.trim()) return searchResults(searchText.trim());
+    var h = '<div class="view">';
+    h += '<section class="sec"><div class="sec-head"><h2>' + esc(t('cities')) + '</h2></div><div class="cities">';
+    D.cities.forEach(function (c) {
+      h += '<a class="city" href="#' + c.id + '" style="--city:' + cityColor(c.id) + '">' +
+        '<span class="stop" aria-hidden="true"></span>' +
+        '<h3>' + esc(L(c)) + '<span class="kr">' + esc(c.ko) + '</span></h3>' +
+        '<p>' + esc(L(c.line)) + '</p>' +
+        '<span class="count">' + esc(t('picks')(placesIn(c.id).length)) + '</span></a>';
+    });
+    h += '</div></section>';
+
+    var swaps = D.places.filter(function (p) { return p.insteadOf; });
+    if (swaps.length) {
+      h += '<section class="sec"><div class="sec-head"><h2>' + esc(t('swaps')) + '</h2><span class="eyebrow">' + esc(t('swapsSub')) + '</span></div><div class="swaps">';
+      swaps.slice(0, 6).forEach(function (p) {
+        h += '<button type="button" class="swap" data-place="' + esc(p.id) + '">' +
+          '<span class="from">' + esc(L(p.insteadOf)) + '</span>' +
+          '<span class="arrow" aria-hidden="true">→</span>' +
+          '<span class="to">' + esc(L(p.name)) + '<small>' + esc(L(city(p.city))) + '</small></span></button>';
+      });
+      h += '</div></section>';
+    }
+
+    h += '<a class="teaser" href="#shopping"><div><span class="eyebrow">Olive Young · 올리브영</span><h3>' + esc(t('shopTitle')) + '</h3><p>' + esc(t('shopSub')) + '</p></div><span class="go" aria-hidden="true">→</span></a>';
+    return h + '</div>';
+  }
+
+  function searchResults(q) {
+    var needle = q.toLowerCase();
+    var hits = D.places.filter(function (p) {
+      var hay = [p.ko, p.name.en, p.name.ja, p.area.en, p.area.ja, p.why.en, p.why.ja, city(p.city).en, city(p.city).ja, city(p.city).ko].join(' ').toLowerCase();
+      return hay.indexOf(needle) !== -1;
+    });
+    if (!hits.length) return '<div class="empty">' + esc(t('noResults')) + '</div>';
+    return '<section class="sec"><span class="eyebrow">' + esc(t('results')(hits.length)) + '</span><div class="list">' +
+      hits.map(function (p) { return placeCard(p, true); }).join('') + '</div></section>';
+  }
+
+  function viewCity(c, cat) {
+    var all = placesIn(c.id);
+    var shown = cat ? placesIn(c.id, cat) : all;
+    var h = '<div class="view" style="--city:' + cityColor(c.id) + '">';
+    h += '<a class="back" href="#">← ' + esc(t('back')) + '</a>';
+    h += '<section class="city-head"><span class="line-rule" aria-hidden="true"></span><h1>' + esc(L(c)) + '<span class="kr">' + esc(c.ko) + '</span></h1><p>' + esc(L(c.line)) + '</p></section>';
+    h += '<nav class="chips" aria-label="Category">';
+    h += '<a class="chip" href="#' + c.id + '" ' + (!cat ? 'aria-current="page"' : '') + '>' + esc(t('all')) + '<span class="n">' + all.length + '</span></a>';
+    D.categories.forEach(function (k) {
+      var n = placesIn(c.id, k.id).length;
+      if (!n) return;
+      h += '<a class="chip" href="#' + c.id + '.' + k.id + '" ' + (cat === k.id ? 'aria-current="page"' : '') + '>' + esc(L(k)) + '<span class="n">' + n + '</span></a>';
+    });
+    h += '</nav>';
+    h += '<div class="list">' + (shown.length ? shown.map(function (p) { return placeCard(p, false); }).join('') : '<div class="empty">' + esc(t('noResults')) + '</div>') + '</div>';
+    return h + '</div>';
+  }
+
+  function viewShopping() {
+    var s = D.shopping;
+    var h = '<div class="view">';
+    h += '<a class="back" href="#">← ' + esc(t('back')) + '</a>';
+    h += '<section class="city-head" style="--city:var(--local)"><span class="line-rule" aria-hidden="true"></span><h1>' + esc(t('shopTitle')) + '</h1><p>' + esc(t('shopSub')) + '</p></section>';
+    h += '<section class="sec"><h2 class="eyebrow">' + esc(t('shopTips')) + '</h2><ul class="shop-tips">' +
+      L(s.tips).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></section>';
+    h += '<section class="sec"><h2 class="eyebrow">' + esc(t('shopTop')) + '</h2><div class="shop-list">';
+    s.items.forEach(function (it, i) {
+      h += '<div class="shop"><div><h3>' + esc(L(it.name)) + ' <span class="kr" style="font-weight:400;color:var(--muted);font-size:13px">' + esc(it.ko) + '</span></h3><p>' + esc(L(it.why)) + '</p></div>' +
+        '<button type="button" class="mini-btn" data-staff-shop="' + i + '">' + esc(t('staff')) + '</button></div>';
+    });
+    h += '</div></section>';
+    return h + '</div>';
+  }
+
+  /* ── router: #seoul, #seoul.cafe, #shopping ── */
+  function render() {
+    var hash = (location.hash || '').replace(/^#/, '');
+    var parts = hash.split('.');
+    var app = document.getElementById('app');
+    var c = city(parts[0]);
+    var cat = parts[1] && D.categories.some(function (k) { return k.id === parts[1]; }) ? parts[1] : null;
+
+    if (c) { app.innerHTML = viewCity(c, cat); document.title = L(c) + ' · LocalPick Korea'; }
+    else if (parts[0] === 'shopping') { app.innerHTML = viewShopping(); document.title = t('shopTitle') + ' · LocalPick Korea'; }
+    else { app.innerHTML = viewHome(); document.title = 'LocalPick Korea'; bindSearch(); }
+
+    document.getElementById('foot').textContent = t('foot');
+  }
+
+  function bindSearch() {
+    var q = document.getElementById('q');
+    if (!q) return;
+    q.addEventListener('input', function () {
+      searchText = q.value;
+      document.getElementById('home-body').innerHTML = homeBody();
+    });
+  }
+
+  /* ── place sheet ── */
+  var openPlaceId = null;
+  var lastFocus = null;
+
+  function openSheet(id) {
+    var p = place(id);
+    if (!p) return;
+    if (!openPlaceId) lastFocus = document.activeElement;
+    openPlaceId = id;
+    var c = city(p.city);
+    var h = '<div class="grab" aria-hidden="true"></div>';
+    h += '<div class="sheet-head" style="--city:' + cityColor(p.city) + '"><div><span class="eyebrow" style="color:var(--city)">' + esc(L(c)) + ' · ' + esc(L(D.categories.filter(function (k) { return k.id === p.cat; })[0])) + '</span>' +
+      '<h2 id="sheet-title">' + esc(L(p.name)) + '</h2><div class="ko-big">' + esc(p.ko) + '</div></div>' +
+      '<button type="button" class="x" data-close aria-label="' + esc(t('close')) + '">×</button></div>';
+    h += '<div class="sub"><span>' + esc(L(p.area)) + '</span><span class="price">' + esc(t('price')[p.price] || p.price) + '</span></div>';
+    h += meter(p);
+    if (p.insteadOf) h += '<div class="instead"><span>' + esc(t('insteadOf')) + '</span><s>' + esc(L(p.insteadOf)) + '</s></div>';
+    h += '<div><h4>' + esc(t('why')) + '</h4><p>' + esc(L(p.why)) + '</p></div>';
+    var tips = L(p.tips);
+    if (tips && tips.length) h += '<div><h4>' + esc(t('tips')) + '</h4><ul>' + tips.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
+    h += '<div class="actions">' +
+      '<a class="btn primary wide" href="' + esc(naverUrl(p.map || p.ko)) + '" target="_blank" rel="noopener">' + ICON_PIN + esc(t('map')) + '</a>' +
+      '<button type="button" class="btn" data-staff-place="' + esc(p.id) + '">' + esc(t('staff')) + '</button>' +
+      '<button type="button" class="btn" data-copy="' + esc(p.ko) + '">' + esc(t('copy')) + '</button>' +
+    '</div>';
+    h += '<p style="font-size:12px;color:var(--muted)">' + esc(t('naverNote')) + '</p>';
+
+    var sheet = document.getElementById('sheet');
+    sheet.innerHTML = h;
+    document.getElementById('sheet-scrim').hidden = false;
+    document.body.style.overflow = 'hidden';
+    sheet.scrollTop = 0;
+    var x = sheet.querySelector('[data-close]');
+    if (x) x.focus();
+  }
+
+  function closeSheet() {
+    openPlaceId = null;
+    document.getElementById('sheet-scrim').hidden = true;
+    document.body.style.overflow = '';
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  /* ── show-to-staff screen ── */
+  function openStaff(korean, meaning, placeKo) {
+    var el = document.getElementById('staff');
+    el.innerHTML =
+      '<div class="staff-top"><span class="eyebrow">' + esc(t('staffTop')) + '</span>' +
+      '<button type="button" class="x" data-staff-close aria-label="' + esc(t('close')) + '">×</button></div>' +
+      '<div class="slip">' +
+        '<div class="to-staff">사장님, 이거 봐 주세요 🙏</div>' +
+        (placeKo ? '<div class="place">' + esc(placeKo) + '</div>' : '') +
+        '<div class="big" lang="ko">' + esc(korean) + '</div>' +
+        '<div class="mean">' + esc(meaning) + '</div>' +
+      '</div><div></div>';
+    el.hidden = false;
+    var x = el.querySelector('[data-staff-close]');
+    if (x) x.focus();
+    if (navigator.wakeLock && navigator.wakeLock.request) {
+      navigator.wakeLock.request('screen').then(function (l) { el._lock = l; }).catch(function () {});
+    }
+  }
+  function closeStaff() {
+    var el = document.getElementById('staff');
+    el.hidden = true;
+    if (el._lock) { el._lock.release().catch(function () {}); el._lock = null; }
+    var back = document.querySelector('#sheet [data-staff-place]');
+    if (back && openPlaceId) back.focus();
+  }
+
+  function copyText(text, btn) {
+    var done = function () {
+      var old = btn.textContent;
+      btn.textContent = t('copied');
+      setTimeout(function () { btn.textContent = old; }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallbackSelect(text); });
+    } else { fallbackSelect(text); }
+  }
+  function fallbackSelect(text) {
+    var big = document.querySelector('#sheet .ko-big');
+    if (!big) return;
+    var r = document.createRange(); r.selectNodeContents(big);
+    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
+
+  /* ── events ── */
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-lang],[data-place],[data-close],[data-staff-place],[data-staff-shop],[data-staff-close],[data-copy]');
+    if (!el) {
+      if (e.target.id === 'sheet-scrim') closeSheet();
+      return;
+    }
+    if (el.dataset.lang) return setLang(el.dataset.lang);
+    if (el.dataset.place) return openSheet(el.dataset.place);
+    if (el.hasAttribute('data-close')) return closeSheet();
+    if (el.hasAttribute('data-staff-close')) return closeStaff();
+    if (el.dataset.staffPlace) {
+      var p = place(el.dataset.staffPlace);
+      return openStaff(p.order.ko, L(p.order), p.ko);
+    }
+    if (el.dataset.staffShop != null) {
+      var it = D.shopping.items[+el.dataset.staffShop];
+      return openStaff(it.ko + ' 어디 있어요?', L(it.name) + ' · ' + t('whereIs'), '올리브영');
+    }
+    if (el.dataset.copy) return copyText(el.dataset.copy, el);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (!document.getElementById('staff').hidden) closeStaff();
+    else if (openPlaceId) closeSheet();
+  });
+
+  window.addEventListener('hashchange', function () {
+    if (openPlaceId) closeSheet();
+    searchText = '';
+    render();
+    window.scrollTo(0, 0);
+  });
+
+  setLang(lang);
+})();
+</script>
+</body>
+</html>
