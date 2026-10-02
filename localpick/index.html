@@ -1,0 +1,1465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LocalPick Korea</title>
+<meta name="description" content="Where Koreans actually eat, drink and go in Seoul, Busan, Jeonju and Gyeongju.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+JP:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<style>
+/* Layout: phone-first single column, sticky top bar, cards keyed to a "locals vs tourists" meter */
+:root {
+  --bg: #f3f5f2;
+  --surface: #ffffff;
+  --ink: #15211d;
+  --muted: #5b6b65;
+  --line: #dbe2de;
+  --local: #0d7f61;
+  --local-soft: #d9efe7;
+  --tourist: #b97a12;
+  --tourist-soft: #f6ead2;
+  --c-seoul: #3557c9;
+  --c-busan: #0a7f99;
+  --c-jeonju: #a8532a;
+  --c-gyeongju: #7247a6;
+  --sign-ink: #ffffff;
+  --map-empty: #e4e9e5;
+  --spicy: #c8372d;
+  --shadow: 0 1px 2px rgba(21, 33, 29, .06), 0 4px 16px rgba(21, 33, 29, .06);
+  --display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "IBM Plex Sans JP", "IBM Plex Sans KR", "Hiragino Sans", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --kr: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1513; --surface: #17201d; --ink: #e5ece9; --muted: #9aaba5; --line: #2a3632;
+    --local: #3cc59c; --local-soft: #173a30; --tourist: #e3ac4c; --tourist-soft: #3a2f19;
+    --c-seoul: #7c97f2; --c-busan: #4fc1d8; --c-jeonju: #e08a62; --c-gyeongju: #b28ce4;
+    --sign-ink: #0e1513; --map-empty: #1d2724; --spicy: #f07a6e;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1513; --surface: #17201d; --ink: #e5ece9; --muted: #9aaba5; --line: #2a3632;
+  --local: #3cc59c; --local-soft: #173a30; --tourist: #e3ac4c; --tourist-soft: #3a2f19;
+  --c-seoul: #7c97f2; --c-busan: #4fc1d8; --c-jeonju: #e08a62; --c-gyeongju: #b28ce4;
+  --sign-ink: #0e1513; --map-empty: #1d2724; --spicy: #f07a6e;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font: inherit; color: inherit; }
+a { color: inherit; }
+img { max-width: 100%; display: block; }
+:focus-visible { outline: 2px solid var(--local); outline-offset: 2px; border-radius: 6px; }
+.kr { font-family: var(--kr); }
+
+/* ── top bar ── */
+.bar {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 1000;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.bar-in {
+  max-width: 560px; margin: 0 auto;
+  padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.brand {
+  display: flex; align-items: baseline; gap: 8px;
+  text-decoration: none;
+  font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: -.01em;
+}
+.brand .pin { color: var(--local); }
+.brand small { font-family: var(--kr); font-weight: 400; font-size: 12px; color: var(--muted); }
+.lang {
+  display: inline-flex; padding: 3px; gap: 2px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+}
+.lang button {
+  border: 0; background: transparent; cursor: pointer;
+  padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--muted);
+}
+.lang button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+/* ── page ── */
+main { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 20px 48px; }
+.view { display: grid; gap: 28px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+.hero h1 {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(34px, 9vw, 46px); line-height: 1.02; letter-spacing: -.025em;
+}
+.hero h1 em { font-style: normal; color: var(--local); }
+.hero p { margin: 12px 0 0; color: var(--muted); max-width: 40ch; }
+.eyebrow {
+  font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
+.sec { display: grid; gap: 12px; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.sec-head h2 { font-family: var(--display); font-weight: 600; font-size: 22px; letter-spacing: -.01em; }
+
+/* search */
+.search { position: relative; }
+.search input {
+  width: 100%; padding: 13px 14px 13px 42px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  font-size: 16px;
+}
+.search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+
+/* cities */
+.cities { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.city {
+  display: grid; gap: 6px; align-content: start;
+  padding: 14px; min-height: 132px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  text-decoration: none; position: relative; overflow: hidden;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.city:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.city .stop {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 4px solid var(--city); background: var(--surface);
+}
+.city h3 { font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: -.01em; line-height: 1.1; }
+.city h3 .kr { font-weight: 400; font-size: 13px; color: var(--muted); margin-left: 4px; }
+.city p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
+.city .count { font-size: 12px; font-weight: 600; color: var(--city); }
+
+/* chips (themes, categories, shop tabs) */
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; margin: 0 -16px; padding-inline: 16px; }
+.chips::-webkit-scrollbar { display: none; }
+.chips.wrap { flex-wrap: wrap; overflow: visible; margin: 0; padding-inline: 0; }
+.chip {
+  flex: none; padding: 8px 14px; border-radius: 999px; cursor: pointer; text-decoration: none;
+  background: var(--surface); border: 1px solid var(--line); font-size: 14px; font-weight: 500;
+}
+.chip[aria-current="page"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip .n { color: var(--muted); font-weight: 400; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.chip[aria-current="page"] .n { color: inherit; opacity: .7; }
+
+/* swaps: "instead of → try" */
+.swaps { display: grid; gap: 8px; }
+.swap {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px;
+  padding: 12px 14px; width: 100%; text-align: left; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+}
+.swap .from { color: var(--muted); font-size: 13px; text-decoration: line-through; text-decoration-color: var(--tourist); min-width: 0; }
+.swap .to { font-weight: 600; font-size: 14px; min-width: 0; }
+.swap .to small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.swap .arrow { color: var(--local); }
+
+/* must-buy tiles */
+.buy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.buy {
+  display: grid; gap: 4px; align-content: start; padding: 14px; text-decoration: none;
+  background: var(--tourist-soft); border-radius: var(--radius); min-height: 104px;
+}
+.buy .k { font-family: var(--kr); font-weight: 700; font-size: 22px; color: var(--tourist); line-height: 1.1; }
+.buy h3 { font-size: 15px; font-weight: 600; }
+.buy p { margin: 0; font-size: 12px; color: var(--muted); }
+
+/* apps */
+.apps { display: grid; gap: 8px; }
+.app-row {
+  display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center;
+  padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+}
+.app-row h3 { font-size: 15px; font-weight: 600; }
+.app-row p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.mini-btn {
+  border: 1px solid var(--line); background: var(--bg); border-radius: 10px; cursor: pointer; text-decoration: none;
+  padding: 6px 10px; font-size: 12px; font-weight: 500; white-space: nowrap;
+}
+
+/* city header */
+.back {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+  font-size: 14px; color: var(--muted);
+}
+.city-head { display: grid; gap: 8px; }
+.city-head .line-rule { height: 6px; border-radius: 3px; background: var(--city); width: 64px; }
+.city-head h1 { font-family: var(--display); font-weight: 800; font-size: 40px; letter-spacing: -.02em; line-height: 1; }
+.city-head h1 .kr { font-weight: 400; font-size: 18px; color: var(--muted); margin-left: 8px; letter-spacing: 0; }
+.city-head p { margin: 0; color: var(--muted); }
+.toolbar { display: grid; gap: 12px; }
+.seg {
+  display: inline-flex; padding: 3px; gap: 2px; justify-self: start;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+}
+.seg a {
+  padding: 6px 16px; border-radius: 9px; text-decoration: none; font-size: 14px; font-weight: 500; color: var(--muted);
+}
+.seg a[aria-current="page"] { background: var(--ink); color: var(--bg); }
+
+/* place cards */
+.list { display: grid; gap: 10px; }
+.group-title { font-family: var(--display); font-weight: 600; font-size: 18px; margin-top: 8px; color: var(--city); }
+.card {
+  display: grid; grid-template-columns: 72px 1fr; gap: 14px; width: 100%; text-align: left; cursor: pointer;
+  padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.card:hover { box-shadow: var(--shadow); border-color: color-mix(in srgb, var(--local) 35%, var(--line)); }
+.card-body { display: grid; gap: 8px; min-width: 0; }
+.card-top { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
+.card h3 { font-size: 16px; font-weight: 600; line-height: 1.3; }
+.card .ko { font-family: var(--kr); font-size: 13px; color: var(--muted); }
+.card .why { margin: 0; font-size: 14px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card .meta { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--muted); }
+.card .city-tag { font-weight: 600; color: var(--city); }
+.price { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; color: var(--ink); white-space: nowrap; }
+
+/* photo or Korean signboard placeholder */
+.thumb {
+  width: 72px; height: 72px; border-radius: 12px; overflow: hidden; position: relative;
+  background: var(--city); color: var(--sign-ink);
+  display: grid; place-items: center; text-align: center;
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.sign {
+  font-family: var(--kr); font-weight: 700; line-height: 1.1; padding: 6px; word-break: keep-all;
+}
+.thumb .sign { font-size: 15px; }
+.thumb .sign.long { font-size: 12.5px; }
+.thumb::after {
+  content: ""; position: absolute; inset: 5px; border: 1.5px solid color-mix(in srgb, var(--sign-ink) 45%, transparent); border-radius: 8px; pointer-events: none;
+}
+.thumb.has-photo::after { display: none; }
+.hero-photo {
+  margin: 0 -20px; aspect-ratio: 16 / 9; max-width: calc(100% + 40px); position: relative; overflow: hidden;
+  background: var(--city); color: var(--sign-ink); display: grid; place-items: center;
+}
+.hero-photo img { width: 100%; height: 100%; object-fit: cover; }
+.hero-photo .sign { font-size: clamp(28px, 9vw, 44px); padding: 18px 28px; border: 3px solid color-mix(in srgb, var(--sign-ink) 55%, transparent); border-radius: 10px; }
+.hero-photo figcaption {
+  position: absolute; right: 8px; bottom: 6px; font-size: 11px; color: #fff; background: rgba(0, 0, 0, .45); padding: 2px 6px; border-radius: 6px;
+}
+
+/* local meter */
+.meter { display: grid; gap: 5px; }
+.meter-label { display: flex; justify-content: space-between; font-size: 12px; }
+.meter-label .tag { font-weight: 600; color: var(--local); }
+.meter-label .tag.mixed { color: var(--tourist); }
+.meter-bars { display: grid; grid-template-columns: auto 1fr; gap: 3px 8px; align-items: center; font-size: 11px; color: var(--muted); }
+.dots { display: flex; gap: 3px; }
+.dots i { width: 100%; max-width: 22px; height: 6px; border-radius: 3px; background: var(--line); flex: 1; }
+.dots.l i.on { background: var(--local); }
+.dots.t i.on { background: var(--tourist); }
+
+.empty { padding: 24px; text-align: center; color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); }
+.note { font-size: 12px; color: var(--muted); margin: 0; }
+
+/* map */
+.map-wrap { display: grid; gap: 8px; }
+#map {
+  height: min(62vh, 520px); min-height: 340px; border-radius: var(--radius); border: 1px solid var(--line);
+  background: var(--map-empty); z-index: 0;
+}
+.lp-pin {
+  width: 26px; height: 26px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  background: var(--pc); border: 2px solid var(--surface); box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
+  display: grid; place-items: center;
+}
+.lp-pin span { transform: rotate(45deg); width: 8px; height: 8px; border-radius: 50%; background: var(--surface); }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--surface); color: var(--ink); }
+.leaflet-popup-content { margin: 12px 14px; font-family: var(--body); }
+.pop { display: grid; gap: 6px; min-width: 160px; }
+.pop strong { font-size: 14px; }
+.pop .ko { font-family: var(--kr); font-size: 12px; color: var(--muted); }
+.pop button { border: 0; border-radius: 8px; padding: 7px 10px; background: var(--local); color: #fff; font-weight: 600; cursor: pointer; }
+.leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
+
+/* shopping */
+.shop-tips { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.shop-tips li { padding: 12px 14px; background: var(--tourist-soft); border-radius: 12px; font-size: 14px; }
+.shop-list { display: grid; gap: 8px; counter-reset: rank; }
+.shop {
+  display: grid; grid-template-columns: 32px 1fr auto; gap: 12px; align-items: center;
+  padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+}
+.shop::before {
+  counter-increment: rank; content: counter(rank);
+  font-family: var(--display); font-weight: 800; font-size: 22px; color: var(--local); text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.shop h3 { font-size: 15px; font-weight: 600; }
+.shop h3 .kr { font-weight: 400; color: var(--muted); font-size: 13px; }
+.shop p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+
+footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40px; font-size: 12px; color: var(--muted); }
+
+/* ── bottom sheet ── */
+.scrim {
+  position: fixed; inset: 0; z-index: 2000; background: rgba(8, 14, 12, .45);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.sheet {
+  width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; overflow-x: hidden;
+  background: var(--surface); border-radius: 20px 20px 0 0;
+  padding: 10px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  display: grid; gap: 18px;
+  animation: up .22s ease-out;
+}
+@keyframes up { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+.grab { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto; }
+.sheet-head { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+.sheet h2 { font-family: var(--display); font-weight: 800; font-size: 26px; line-height: 1.1; letter-spacing: -.015em; }
+.sheet .ko-big { font-family: var(--kr); font-size: 17px; color: var(--muted); margin-top: 4px; }
+.x {
+  flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--bg); cursor: pointer; font-size: 18px; line-height: 1;
+}
+.sheet .sub { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+.sheet h4 { margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.sheet p { margin: 0; }
+.sheet ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.instead {
+  display: flex; gap: 10px; align-items: center; padding: 12px 14px;
+  background: var(--tourist-soft); border-radius: 12px; font-size: 14px;
+}
+.instead s { text-decoration-color: var(--tourist); }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-align: center;
+  padding: 13px 14px; border-radius: 12px; cursor: pointer; text-decoration: none;
+  font-weight: 600; font-size: 15px; border: 1px solid var(--line); background: var(--bg);
+}
+.btn.primary { background: var(--local); color: #fff; border-color: var(--local); }
+:root[data-theme="dark"] .btn.primary, :root[data-theme="dark"] .pop button { color: #06140f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary, :root:not([data-theme="light"]) .pop button { color: #06140f; } }
+.btn.wide { grid-column: 1 / -1; }
+.say { display: grid; gap: 8px; padding: 14px; border-radius: 12px; background: var(--bg); }
+.say .links { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ── show-to-staff screen ── */
+.staff {
+  position: fixed; inset: 0; z-index: 3000; background: var(--bg);
+  display: grid; grid-template-rows: auto 1fr auto; padding: 16px;
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+.staff-top { display: flex; justify-content: space-between; align-items: center; }
+.staff .slip { max-height: 100%; overflow-y: auto; }
+.slip {
+  align-self: center; justify-self: center; width: 100%; max-width: 520px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 28px 22px;
+  display: grid; gap: 18px; text-align: center; box-shadow: var(--shadow);
+}
+.slip .to-staff { font-family: var(--kr); font-size: 15px; color: var(--muted); }
+.slip .big { font-family: var(--kr); font-weight: 600; font-size: clamp(30px, 8.5vw, 44px); line-height: 1.3; word-break: keep-all; }
+.slip .place { font-family: var(--kr); font-size: 15px; color: var(--local); font-weight: 600; }
+.slip .mean { font-size: 14px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 14px; }
+
+/* menu scan */
+.scan { display: grid; gap: 12px; padding: 16px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); }
+.scan h2 { font-family: var(--display); font-weight: 600; font-size: 20px; }
+.scan-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.scan-btns label { cursor: pointer; }
+.scan-btns input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.scan-btns label:focus-within { outline: 2px solid var(--local); outline-offset: 2px; }
+.scan-status { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; }
+.scan-status img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; }
+.bar-track { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 6px; }
+.bar-fill { height: 100%; background: var(--local); width: 0; transition: width .2s; }
+.dish-said { grid-column: 1 / -1; font-size: 12px; color: var(--tourist); background: var(--tourist-soft); border-radius: 8px; padding: 4px 8px; }
+.dish-said b { font-family: var(--kr); }
+.price-tag { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; color: var(--ink); }
+.other-text { white-space: pre-wrap; font-family: var(--kr); font-size: 14px; padding: 12px; background: var(--bg); border-radius: 10px; max-height: 220px; overflow: auto; margin: 0; }
+.device-out { white-space: pre-wrap; font-size: 14px; padding: 12px; background: var(--local-soft); border-radius: 10px; margin: 0; }
+.cam-guide { border-radius: 12px; background: var(--bg); padding: 12px 14px; }
+.cam-guide summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+.cam-guide ol { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
+
+/* menu translator */
+.promo {
+  display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; text-decoration: none;
+  padding: 16px; border-radius: var(--radius); background: var(--local-soft);
+  border: 1px solid color-mix(in srgb, var(--local) 25%, transparent);
+}
+.promo .k { font-family: var(--kr); font-weight: 700; font-size: 13px; color: var(--local); }
+.promo h3 { font-family: var(--display); font-weight: 600; font-size: 19px; }
+.promo p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.promo .go { font-size: 22px; color: var(--local); }
+.dishes { display: grid; gap: 8px; }
+.dish {
+  display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center;
+  padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+}
+.dish.on { border-color: var(--local); box-shadow: 0 0 0 1px var(--local) inset; }
+.dish-ko { font-family: var(--kr); font-weight: 700; font-size: 24px; line-height: 1.2; word-break: keep-all; }
+.dish-ko small { font-family: var(--body); font-weight: 400; font-size: 12px; color: var(--muted); margin-left: 6px; }
+.dish-main { grid-column: 1 / -1; display: grid; gap: 4px; }
+.dish-main h3 { font-size: 15px; font-weight: 600; }
+.dish-main p { margin: 0; font-size: 13px; color: var(--muted); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-chip { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+.tag-chip.hot { color: var(--spicy); border-color: color-mix(in srgb, var(--spicy) 40%, transparent); }
+.qty { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.qty button { width: 38px; height: 36px; border: 0; background: var(--bg); cursor: pointer; font-size: 18px; font-weight: 600; }
+.qty span { min-width: 28px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
+.reqs { display: flex; flex-wrap: wrap; gap: 8px; }
+.req { padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 13px; text-align: left; }
+.req[aria-pressed="true"] { background: var(--local); border-color: var(--local); color: #fff; }
+.orderbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 1500;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--bg) 92%, transparent); border-top: 1px solid var(--line);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.orderbar-in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; }
+.has-orderbar main { padding-bottom: 110px; }
+.order-lines { display: grid; gap: 8px; text-align: left; }
+.order-lines div { display: flex; justify-content: space-between; gap: 12px; font-family: var(--kr); font-weight: 600; font-size: clamp(22px, 6.5vw, 32px); line-height: 1.25; word-break: keep-all; }
+.order-lines div b { color: var(--local); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.order-reqs { display: grid; gap: 4px; font-family: var(--kr); font-size: 18px; font-weight: 600; text-align: left; border-top: 1px dashed var(--line); padding-top: 12px; }
+.order-mean { display: grid; gap: 2px; text-align: left; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="#" aria-label="LocalPick Korea home"><span>Local<span class="pin">Pick</span></span><small>로컬픽</small></a>
+    <div class="lang" id="lang" role="group" aria-label="Language"></div>
+  </div>
+</header>
+
+<main id="app"></main>
+<footer id="foot"></footer>
+
+<div class="scrim" id="sheet-scrim" hidden>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"></div>
+</div>
+
+<div class="staff" id="staff" role="dialog" aria-modal="true" aria-label="Show to staff" hidden></div>
+
+<div class="orderbar" id="orderbar" hidden></div>
+
+<script src="vendor/leaflet.js"></script>
+<script src="vendor/ocr/tesseract.min.js"></script>
+<script src="data.js"></script>
+<script>
+(function () {
+  'use strict';
+  var D = window.LP_DATA;
+
+  /* ── languages ──
+   * 새 언어를 추가하려면: LANGS에 한 줄 추가 + 아래 T에 같은 이름으로 문장 묶음 추가.
+   * data.js에 그 언어 번역이 없으면 영어로 대신 보여줘요.
+   */
+  var LANGS = [
+    { id: 'en', label: 'EN' },
+    { id: 'ja', label: '日本語' },
+    { id: 'ko', label: '한국어' }
+  ];
+
+  var T = {
+    en: {
+      heroA: 'Travel Korea', heroB: 'like a local.',
+      heroP: 'Where Koreans actually eat, drink and hang out in Seoul, Busan, Jeonju and Gyeongju.',
+      search: 'Search places, food, neighborhoods',
+      cities: 'Pick a city', picks: function (n) { return n + ' local picks'; },
+      themes: 'Browse by theme',
+      swaps: 'Skip the tourist version', swapsSub: 'What locals do instead',
+      buyTitle: 'What to buy in Korea', buySub: 'What Koreans actually buy, and where',
+      appsTitle: 'Apps that work in Korea', appsSub: 'Install before you land',
+      back: 'Home', all: 'All', list: 'List', mapTab: 'Map',
+      locals: 'Locals', tourists: 'Tourists',
+      hidden: 'Hidden local spot', fav: 'Local favorite', both: 'Loved by everyone',
+      why: 'Why locals go', tips: 'Local tips', insteadOf: 'Instead of',
+      map: 'Open in Naver Map', staff: 'Show to staff', copy: 'Copy Korean name', copied: 'Copied',
+      close: 'Close', staffTop: 'Show this screen to the staff', details: 'See details', open: 'Open',
+      price: { '₩': 'Under ₩10,000', '₩₩': '₩10,000–30,000', '₩₩₩': '₩30,000+', 'free': 'Free' },
+      noResults: 'No places match that search yet.',
+      results: function (n) { return n + (n === 1 ? ' place' : ' places'); },
+      shopTips: 'Before you shop', shopTop: 'Top picks', whereIs: 'Where is this?',
+      say: 'What Koreans say', sayNaver: 'Naver blog reviews', sayInsta: 'Instagram posts',
+      sayNote: 'Opens in your language through Google Translate. If a page does not translate, open the original and use your browser’s Translate button. On Instagram, tap “See translation” under a post.',
+      sayOriginal: 'Original',
+      scanTitle: 'Scan a menu', scanSub: 'Take a photo of a Korean menu. Your phone reads it and shows the dishes we know, in your language. The photo never leaves your phone.',
+      takePhoto: 'Take a photo', choosePhoto: 'Choose a photo',
+      scanLoading: 'Getting the reader ready. The first time downloads about 6 MB.', scanReading: 'Reading the menu',
+      found: 'Found on this menu', foundNone: 'No dishes matched. Try a closer, straight-on photo in good light, or use your phone’s camera translation below.',
+      otherText: 'Other text on the menu', translateGoogle: 'Translate this text with Google ↗', translateDevice: 'Translate on this device',
+      scanTip: 'Works best with printed menus, good light and the photo taken straight on. Handwritten menus are hard to read.',
+      scanError: 'This photo could not be read. Try again, or use your phone’s camera translation below.',
+      scanNotImage: 'That file is not a photo. Choose a JPG or PNG photo of the menu.',
+      scanTooBig: 'That photo is too large (over 40 MB). Take a new photo or choose a smaller one.',
+      scanLoadFail: 'The menu reader could not load. Check your internet connection and try again.',
+      cancel: 'Cancel', menuSays: 'Menu says', closest: 'closest match',
+      camTitle: 'Or translate with your phone’s own camera (free)',
+      camSteps: ['iPhone: open the Camera, point at the menu, tap the text icon in the corner, then tap Translate.', 'Android: open Google Lens (in the Google app or the camera), point at the menu, then tap Translate.', 'Any phone: upload a photo to Google Translate.'],
+      camLink: 'Translate a photo on Google Translate ↗',
+      menuTitle: 'Menu translator', menuSub: 'Find the Korean words on the menu, tap + to add them, then show your order to the staff.',
+      menuPromoK: '메뉴판 번역기', menuPromo: 'Can’t read the menu?', menuPromoSub: 'Scan a menu with your camera, see dishes in English, then show your order to the staff.',
+      menuSearch: 'Search: bibimbap, pork, noodles…', requests: 'Add a request', myOrder: function (n) { return n + (n === 1 ? ' item' : ' items'); },
+      showOrder: 'Show order to staff', clear: 'Clear', spicy: 'Spicy', openMenu: 'Menu translator',
+      tagNames: { pork: 'Pork', beef: 'Beef', chicken: 'Chicken', seafood: 'Seafood' },
+      papago: 'Long menu? Take a photo with Papago’s camera mode to translate all of it.',
+      noDish: 'No dish matches that search.',
+      noPins: 'These are dishes you can find all over the city, so they have no pins. Open the list to read about them.',
+      mapNote: 'Pins show approximate locations. Use Naver Map for exact directions.',
+      tileFail: 'The map background could not load here. The pins still work.',
+      foot: 'Hours and prices change. Check Naver Map before you go.',
+      naverNote: 'Naver Map is the map app Koreans use. Google Maps walking directions are limited in Korea.',
+      apps: [
+        { name: 'Naver Map', what: 'Directions, subway routes and Korean reviews. Works far better than Google Maps in Korea.', url: 'https://map.naver.com' },
+        { name: 'Papago', what: 'Translator built for Korean. Point the camera at a menu.', url: 'https://papago.naver.com' },
+        { name: 'Kakao T', what: 'The taxi app most Koreans use.' },
+        { name: 'Olive Young Global', what: 'Reorder your favorite Korean beauty products after you go home.', url: 'https://global.oliveyoung.com' }
+      ]
+    },
+    ja: {
+      heroA: '韓国を、', heroB: '地元の人みたいに。',
+      heroP: 'ソウル・釜山・全州・慶州で、韓国人が本当に食べて、飲んで、遊んでいる場所。',
+      search: '場所・料理・エリアで検索',
+      cities: '都市を選ぶ', picks: function (n) { return '地元のおすすめ ' + n + '件'; },
+      themes: 'テーマで探す',
+      swaps: '観光地の定番より、こっち', swapsSub: '地元の人の選び方',
+      buyTitle: '韓国で買うべきもの', buySub: '韓国人が実際に買うものと、買う場所',
+      appsTitle: '韓国で使えるアプリ', appsSub: '出発前にインストール',
+      back: 'ホーム', all: 'すべて', list: 'リスト', mapTab: '地図',
+      locals: '地元客', tourists: '観光客',
+      hidden: '地元民の穴場', fav: '地元で人気', both: 'みんなに人気',
+      why: '地元の人が行く理由', tips: '地元のコツ', insteadOf: 'こちらの代わりに',
+      map: 'NAVERマップで開く', staff: 'お店の人に見せる', copy: '韓国語名をコピー', copied: 'コピーしました',
+      close: '閉じる', staffTop: 'この画面をお店の人に見せてください', details: '詳しく見る', open: '開く',
+      price: { '₩': '1万ウォン未満', '₩₩': '1〜3万ウォン', '₩₩₩': '3万ウォン以上', 'free': '無料' },
+      noResults: '該当する場所はまだありません。',
+      results: function (n) { return n + '件'; },
+      shopTips: '買い物の前に', shopTop: 'おすすめ', whereIs: 'どこにありますか？',
+      say: '韓国人の口コミ', sayNaver: 'NAVERブログの口コミ', sayInsta: 'Instagramの投稿',
+      sayNote: 'Google翻訳を通して日本語で開きます。翻訳されない場合は原文を開き、ブラウザの翻訳機能を使ってください。Instagramでは投稿の下の「翻訳を見る」をタップ。',
+      sayOriginal: '原文',
+      scanTitle: 'メニューをスキャン', scanSub: '韓国語のメニューを撮影すると、スマホが文字を読み取り、知っている料理を日本語で表示します。写真はスマホの外に送られません。',
+      takePhoto: '写真を撮る', choosePhoto: '写真を選ぶ',
+      scanLoading: '読み取りの準備中です。初回のみ約6MBをダウンロードします。', scanReading: 'メニューを読み取り中',
+      found: 'このメニューで見つかった料理', foundNone: '料理が見つかりませんでした。明るい場所で正面から近づいて撮るか、下のカメラ翻訳を使ってください。',
+      otherText: 'メニューのその他の文字', translateGoogle: 'この文字をGoogleで翻訳 ↗', translateDevice: 'この端末で翻訳',
+      scanTip: '印刷されたメニューを、明るい場所で正面から撮ると読み取りやすいです。手書きは読み取りにくいです。',
+      scanError: 'この写真は読み取れませんでした。もう一度撮るか、下のカメラ翻訳を使ってください。',
+      scanNotImage: '写真ファイルではありません。メニューのJPGまたはPNG写真を選んでください。',
+      scanTooBig: '写真が大きすぎます（40MB超）。撮り直すか、小さい写真を選んでください。',
+      scanLoadFail: '読み取り機能を読み込めませんでした。通信状態を確認してもう一度お試しください。',
+      cancel: 'キャンセル', menuSays: 'メニュー表記', closest: '近い料理',
+      camTitle: 'スマホのカメラ翻訳を使う（無料）',
+      camSteps: ['iPhone：カメラを開いてメニューに向け、隅の文字アイコン → 翻訳をタップ。', 'Android：Googleレンズ（Googleアプリまたはカメラ）でメニューに向け、翻訳をタップ。', 'どのスマホでも：Google翻訳に写真をアップロード。'],
+      camLink: 'Google翻訳で写真を翻訳 ↗',
+      menuTitle: 'メニュー翻訳', menuSub: 'メニューの韓国語を探して＋で追加。注文をお店の人に見せましょう。',
+      menuPromoK: '메뉴판 번역기', menuPromo: 'メニューが読めない？', menuPromoSub: 'メニューを撮影して料理を日本語で確認。注文をお店の人に見せられます。',
+      menuSearch: '検索：ビビンバ、豚肉、麺…', requests: 'リクエストを追加', myOrder: function (n) { return n + '品'; },
+      showOrder: '注文をお店の人に見せる', clear: 'クリア', spicy: '辛い', openMenu: 'メニュー翻訳',
+      tagNames: { pork: '豚肉', beef: '牛肉', chicken: '鶏肉', seafood: '魚介' },
+      papago: 'メニューが長いときは、Papagoのカメラで撮ればまとめて翻訳できます。',
+      noDish: '該当する料理がありません。',
+      noPins: 'これらは街のどこでも食べられる料理なので、ピンはありません。リストで詳しく見られます。',
+      mapNote: 'ピンはおおよその位置です。正確な道順はNAVERマップで。',
+      tileFail: 'ここでは地図の背景を読み込めませんでした。ピンは使えます。',
+      foot: '営業時間や価格は変わることがあります。お出かけ前にNAVERマップで確認を。',
+      naverNote: 'NAVERマップは韓国人が使う地図アプリ。韓国ではGoogleマップの徒歩ルートが使えません。',
+      apps: [
+        { name: 'NAVERマップ', what: '道順・地下鉄・韓国人の口コミ。韓国ではGoogleマップよりずっと便利。', url: 'https://map.naver.com' },
+        { name: 'Papago', what: '韓国語に強い翻訳アプリ。メニューにカメラを向けるだけ。', url: 'https://papago.naver.com' },
+        { name: 'Kakao T', what: '韓国人の多くが使うタクシーアプリ。' },
+        { name: 'Olive Young Global', what: '帰国後も韓国コスメを買い直せます。', url: 'https://global.oliveyoung.com' }
+      ]
+    },
+    ko: {
+      heroA: '한국을,', heroB: '현지인처럼.',
+      heroP: '서울·부산·전주·경주에서 한국인이 진짜로 먹고, 마시고, 노는 곳.',
+      search: '장소, 음식, 동네 검색',
+      cities: '도시 고르기', picks: function (n) { return '로컬 추천 ' + n + '곳'; },
+      themes: '테마로 찾기',
+      swaps: '관광지 말고, 여기', swapsSub: '현지인은 이렇게 골라요',
+      buyTitle: '한국 오면 사야 할 것', buySub: '한국인이 실제로 사는 것과 사는 곳',
+      appsTitle: '한국에서 쓰는 앱', appsSub: '도착 전에 설치하세요',
+      back: '홈', all: '전체', list: '목록', mapTab: '지도',
+      locals: '현지인', tourists: '관광객',
+      hidden: '현지인 숨은 명소', fav: '현지인 인기', both: '모두에게 인기',
+      why: '현지인이 가는 이유', tips: '현지인 팁', insteadOf: '대신할 곳',
+      map: '네이버 지도에서 열기', staff: '직원에게 보여주기', copy: '한글 이름 복사', copied: '복사했어요',
+      close: '닫기', staffTop: '이 화면을 직원에게 보여주세요', details: '자세히 보기', open: '열기',
+      price: { '₩': '1만 원 이하', '₩₩': '1만~3만 원', '₩₩₩': '3만 원 이상', 'free': '무료' },
+      noResults: '검색 결과가 아직 없어요.',
+      results: function (n) { return n + '곳'; },
+      shopTips: '쇼핑 전에', shopTop: '추천 목록', whereIs: '어디 있어요?',
+      say: '한국인 후기', sayNaver: '네이버 블로그 후기', sayInsta: '인스타그램 게시물',
+      sayNote: '외국인 화면에서는 구글 번역을 거쳐 그 나라 말로 열려요. 한국어 화면에서는 원문이 열려요.',
+      sayOriginal: '원문',
+      noPins: '도시 어디서나 먹을 수 있는 음식이라 핀이 없어요. 목록에서 볼 수 있어요.',
+      mapNote: '핀은 대략적인 위치예요. 정확한 길은 네이버 지도로 확인하세요.',
+      tileFail: '여기서는 지도 배경을 불러오지 못했어요. 핀은 그대로 쓸 수 있어요.',
+      foot: '영업시간과 가격은 바뀔 수 있어요. 가기 전에 네이버 지도로 확인하세요.',
+      naverNote: '네이버 지도는 한국인이 쓰는 지도 앱이에요. 한국에서는 구글 지도 도보 길찾기가 제한돼요.',
+      scanTitle: '메뉴판 스캔', scanSub: '한국어 메뉴판을 찍으면 휴대폰이 글자를 읽고, 아는 음식을 그 나라 말로 보여줘요. 사진은 휴대폰 밖으로 나가지 않아요.',
+      takePhoto: '사진 찍기', choosePhoto: '사진 고르기',
+      scanLoading: '읽기 준비 중이에요. 처음 한 번만 약 6MB를 내려받아요.', scanReading: '메뉴판 읽는 중',
+      found: '이 메뉴판에서 찾은 음식', foundNone: '찾은 음식이 없어요. 밝은 곳에서 정면으로 가까이 찍거나, 아래 휴대폰 카메라 번역을 써 보세요.',
+      otherText: '메뉴판의 다른 글자', translateGoogle: '이 글자를 구글로 번역 ↗', translateDevice: '이 기기에서 번역',
+      scanTip: '인쇄된 메뉴판을 밝은 곳에서 정면으로 찍으면 잘 읽어요. 손글씨는 잘 못 읽어요.',
+      scanError: '이 사진은 읽지 못했어요. 다시 찍거나 아래 휴대폰 카메라 번역을 써 보세요.',
+      scanNotImage: '사진 파일이 아니에요. 메뉴판 JPG나 PNG 사진을 골라 주세요.',
+      scanTooBig: '사진이 너무 커요 (40MB 초과). 다시 찍거나 더 작은 사진을 골라 주세요.',
+      scanLoadFail: '읽기 프로그램을 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.',
+      cancel: '취소', menuSays: '메뉴판 표기', closest: '가장 비슷한 음식',
+      camTitle: '휴대폰 자체 카메라 번역 쓰기 (무료)',
+      camSteps: ['아이폰: 카메라를 메뉴판에 대고, 구석의 글자 아이콘 → 번역을 눌러요.', '안드로이드: 구글 렌즈(구글 앱 또는 카메라)로 메뉴판을 비추고 번역을 눌러요.', '어떤 휴대폰이든: 구글 번역에 사진을 올려요.'],
+      camLink: '구글 번역에서 사진 번역하기 ↗',
+      menuTitle: '메뉴판 번역기', menuSub: '메뉴판의 한글을 찾아 +를 누르고, 주문서를 직원에게 보여주세요.',
+      menuPromoK: 'Menu translator', menuPromo: '메뉴판을 못 읽겠다면?', menuPromoSub: '메뉴판을 찍으면 음식을 그 나라 말로 보여주고, 주문서를 직원에게 보여줄 수 있어요.',
+      menuSearch: '검색: 비빔밥, 돼지고기, 면…', requests: '요청 추가', myOrder: function (n) { return n + '개 메뉴'; },
+      showOrder: '직원에게 주문 보여주기', clear: '비우기', spicy: '매운맛', openMenu: '메뉴판 번역기',
+      tagNames: { pork: '돼지고기', beef: '소고기', chicken: '닭고기', seafood: '해산물' },
+      papago: '메뉴가 길면 파파고 카메라로 찍어서 한 번에 번역할 수 있어요.',
+      noDish: '검색된 음식이 없어요.',
+      apps: [
+        { name: '네이버 지도', what: '길찾기, 지하철, 한국인 후기. 한국에선 구글 지도보다 훨씬 정확해요.', url: 'https://map.naver.com' },
+        { name: '파파고', what: '한국어에 강한 번역기. 메뉴판에 카메라를 대면 돼요.', url: 'https://papago.naver.com' },
+        { name: '카카오T', what: '한국인 대부분이 쓰는 택시 앱.' },
+        { name: '올리브영 글로벌', what: '귀국 후에도 한국 화장품을 다시 살 수 있어요.', url: 'https://global.oliveyoung.com' }
+      ]
+    }
+  };
+
+  /* ── language ── */
+  var lang = 'en';
+  var navLang = (navigator.language || '').toLowerCase();
+  function known(id) { return LANGS.some(function (l) { return l.id === id; }); }
+  try {
+    var saved = localStorage.getItem('lp-lang');
+    if (saved && known(saved)) lang = saved;
+    else if (known(navLang.slice(0, 2))) lang = navLang.slice(0, 2);
+  } catch (e) {
+    if (known(navLang.slice(0, 2))) lang = navLang.slice(0, 2);
+  }
+  function t(key) { var v = T[lang] && T[lang][key]; return v == null ? T.en[key] : v; }
+  function L(obj) { return obj ? (obj[lang] || obj.en || '') : ''; }
+
+  function setLang(next) {
+    lang = next;
+    try { localStorage.setItem('lp-lang', next); } catch (e) {}
+    document.documentElement.lang = next;
+    document.getElementById('lang').innerHTML = LANGS.map(function (l) {
+      return '<button type="button" id="lang-' + l.id + '" data-lang="' + l.id + '" aria-pressed="' + String(l.id === lang) + '">' + esc(l.label) + '</button>';
+    }).join('');
+    render();
+    if (openPlaceId) openSheet(openPlaceId);
+  }
+
+  /* ── helpers ── */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function city(id) { return D.cities.filter(function (c) { return c.id === id; })[0]; }
+  function cat(id) { return D.categories.filter(function (k) { return k.id === id; })[0]; }
+  function place(id) { return D.places.filter(function (p) { return p.id === id; })[0]; }
+  function placesIn(cityId, catId) {
+    return D.places.filter(function (p) { return (!cityId || p.city === cityId) && (!catId || p.cat === catId); });
+  }
+  function group(id) { return D.shopping.groups.filter(function (g) { return g.id === id; })[0]; }
+  function cityColor(id) { return 'var(--c-' + id + ')'; }
+  function naverUrl(q) { return 'https://map.naver.com/p/search/' + encodeURIComponent(q); }
+  function blogUrl(q) { return 'https://search.naver.com/search.naver?ssc=tab.blog.all&query=' + encodeURIComponent(q); }
+  function instaUrl(ko) { return 'https://www.instagram.com/explore/tags/' + encodeURIComponent(ko.replace(/\s+/g, '')) + '/'; }
+
+  function verdict(p) {
+    var d = p.locals - p.tourists;
+    if (d >= 3) return { text: t('hidden'), cls: '' };
+    if (d >= 1) return { text: t('fav'), cls: '' };
+    return { text: t('both'), cls: 'mixed' };
+  }
+  function dots(n, cls) {
+    var h = '<span class="dots ' + cls + '" aria-hidden="true">';
+    for (var i = 1; i <= 5; i++) h += '<i class="' + (i <= n ? 'on' : '') + '"></i>';
+    return h + '</span>';
+  }
+  function meter(p) {
+    var v = verdict(p);
+    return '<div class="meter" aria-label="' + esc(t('locals') + ' ' + p.locals + '/5, ' + t('tourists') + ' ' + p.tourists + '/5') + '">' +
+      '<div class="meter-label"><span class="tag ' + v.cls + '">' + esc(v.text) + '</span></div>' +
+      '<div class="meter-bars">' +
+        '<span>' + esc(t('locals')) + '</span>' + dots(p.locals, 'l') +
+        '<span>' + esc(t('tourists')) + '</span>' + dots(p.tourists, 't') +
+      '</div></div>';
+  }
+  /* 이름: 한국어 화면이면 한글 이름, 아니면 그 언어 이름 */
+  function nameOf(x) { return lang === 'ko' && typeof x.ko === 'string' ? x.ko : L(x.name); }
+  function subName(x) { return lang === 'ko' ? (x.name && x.name.en) || '' : x.ko; }
+  function translated(url) {
+    if (lang === 'ko') return url;
+    return 'https://translate.google.com/translate?sl=ko&tl=' + lang + '&hl=' + lang + '&u=' + encodeURIComponent(url);
+  }
+  function krTag(ko, style) { return lang === 'ko' ? '' : '<span class="kr"' + (style ? ' style="' + style + '"' : '') + '>' + esc(ko) + '</span>'; }
+  function signWord(ko) { return ko.split(' ')[0].slice(0, 4); }
+  function thumb(p) {
+    if (p.photo && p.photo.src) {
+      return '<span class="thumb has-photo"><img src="' + esc(p.photo.src) + '" alt="" loading="lazy"></span>';
+    }
+    var w = signWord(p.ko);
+    return '<span class="thumb" aria-hidden="true"><span class="sign' + (w.length > 3 ? ' long' : '') + '">' + esc(w) + '</span></span>';
+  }
+  function heroPhoto(p) {
+    if (p.photo && p.photo.src) {
+      return '<figure class="hero-photo"><img src="' + esc(p.photo.src) + '" alt="' + esc(nameOf(p)) + '">' +
+        (p.photo.credit ? '<figcaption>© ' + esc(p.photo.credit) + '</figcaption>' : '') + '</figure>';
+    }
+    return '<div class="hero-photo" aria-hidden="true"><span class="sign">' + esc(p.ko) + '</span></div>';
+  }
+
+  var ICON_SEARCH = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
+  var ICON_PIN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+
+  function placeCard(p, showCity) {
+    return '<button type="button" class="card" data-place="' + esc(p.id) + '" style="--city:' + cityColor(p.city) + '">' +
+      thumb(p) +
+      '<span class="card-body">' +
+        '<span class="card-top"><span><h3>' + esc(nameOf(p)) + '</h3><span class="ko">' + esc(subName(p)) + '</span></span>' +
+        '<span class="price">' + esc(p.price === 'free' ? t('price').free : p.price) + '</span></span>' +
+        '<p class="why">' + esc(L(p.why)) + '</p>' +
+        meter(p) +
+        '<span class="meta">' + (showCity ? '<span class="city-tag">' + esc(L(city(p.city))) + '</span>' : '') + '<span>' + esc(L(p.area)) + '</span></span>' +
+      '</span>' +
+    '</button>';
+  }
+
+  /* ── views ── */
+  var searchText = '';
+
+  function viewHome() {
+    var h = '<div class="view">';
+    h += '<section class="hero"><h1>' + esc(t('heroA')) + '<br><em>' + esc(t('heroB')) + '</em></h1><p>' + esc(t('heroP')) + '</p></section>';
+    h += '<div class="search">' + ICON_SEARCH + '<input id="q" type="search" autocomplete="off" placeholder="' + esc(t('search')) + '" aria-label="' + esc(t('search')) + '" value="' + esc(searchText) + '"></div>';
+    h += '<a class="promo" href="#menu"><div><span class="k">' + esc(t('menuPromoK')) + '</span><h3>' + esc(t('menuPromo')) + '</h3><p>' + esc(t('menuPromoSub')) + '</p></div><span class="go" aria-hidden="true">→</span></a>';
+    h += '<div id="home-body">' + homeBody() + '</div>';
+    return h + '</div>';
+  }
+
+  function homeBody() {
+    if (searchText.trim()) return searchResults(searchText.trim());
+    var h = '<div class="view">';
+
+    h += '<section class="sec"><div class="sec-head"><h2>' + esc(t('cities')) + '</h2></div><div class="cities">';
+    D.cities.forEach(function (c) {
+      h += '<a class="city" href="#' + c.id + '" style="--city:' + cityColor(c.id) + '">' +
+        '<span class="stop" aria-hidden="true"></span>' +
+        '<h3>' + esc(L(c)) + krTag(c.ko) + '</h3>' +
+        '<p>' + esc(L(c.line)) + '</p>' +
+        '<span class="count">' + esc(t('picks')(placesIn(c.id).length)) + '</span></a>';
+    });
+    h += '</div></section>';
+
+    h += '<section class="sec"><div class="sec-head"><h2>' + esc(t('themes')) + '</h2></div><nav class="chips wrap" aria-label="' + esc(t('themes')) + '">';
+    D.categories.forEach(function (k) {
+      var n = placesIn(null, k.id).length;
+      if (n) h += '<a class="chip" href="#all.' + k.id + '">' + esc(L(k)) + '<span class="n">' + n + '</span></a>';
+    });
+    h += '</nav></section>';
+
+    var swaps = D.places.filter(function (p) { return p.insteadOf; });
+    if (swaps.length) {
+      h += '<section class="sec"><div class="sec-head"><h2>' + esc(t('swaps')) + '</h2><span class="eyebrow">' + esc(t('swapsSub')) + '</span></div><div class="swaps">';
+      swaps.slice(0, 6).forEach(function (p) {
+        h += '<button type="button" class="swap" data-place="' + esc(p.id) + '">' +
+          '<span class="from">' + esc(L(p.insteadOf)) + '</span>' +
+          '<span class="arrow" aria-hidden="true">→</span>' +
+          '<span class="to">' + esc(nameOf(p)) + '<small>' + esc(L(city(p.city))) + '</small></span></button>';
+      });
+      h += '</div></section>';
+    }
+
+    h += '<section class="sec"><div class="sec-head"><h2>' + esc(t('buyTitle')) + '</h2><span class="eyebrow">' + esc(t('buySub')) + '</span></div><div class="buy-grid">';
+    D.shopping.groups.forEach(function (g) {
+      h += '<a class="buy" href="#shopping.' + g.id + '"><span class="k">' + esc(lang === 'ko' ? L(g.name) : g.ko) + '</span><h3>' + esc(nameOf(g)) + '</h3><p>' + esc(g.items.length + ' · ' + g.items.slice(0, 2).map(function (it) { return nameOf(it); }).join(', ')) + '</p></a>';
+    });
+    h += '</div></section>';
+
+    h += '<section class="sec"><div class="sec-head"><h2>' + esc(t('appsTitle')) + '</h2><span class="eyebrow">' + esc(t('appsSub')) + '</span></div><div class="apps">';
+    t('apps').forEach(function (a) {
+      h += '<div class="app-row"><div><h3>' + esc(a.name) + '</h3><p>' + esc(a.what) + '</p></div>' +
+        (a.url ? '<a class="mini-btn" href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(t('open')) + ' ↗</a>' : '<span></span>') + '</div>';
+    });
+    h += '</div></section>';
+
+    return h + '</div>';
+  }
+
+  function searchResults(q) {
+    var needle = q.toLowerCase();
+    var hits = D.places.filter(function (p) {
+      var c = city(p.city);
+      var hay = [p.ko, p.name.en, p.name.ja, p.area.ko, p.area.en, p.area.ja, p.why.ko, p.why.en, p.why.ja, c.en, c.ja, c.ko].join(' ').toLowerCase();
+      return hay.indexOf(needle) !== -1;
+    });
+    if (!hits.length) return '<div class="empty">' + esc(t('noResults')) + '</div>';
+    return '<section class="sec"><span class="eyebrow">' + esc(t('results')(hits.length)) + '</span><div class="list">' +
+      hits.map(function (p) { return placeCard(p, true); }).join('') + '</div></section>';
+  }
+
+  function viewCity(c, catId, mode) {
+    var all = placesIn(c.id);
+    var shown = placesIn(c.id, catId);
+    var base = '#' + c.id + (mode === 'map' ? '.map' : '');
+    var h = '<div class="view" style="--city:' + cityColor(c.id) + '">';
+    h += '<a class="back" href="#">← ' + esc(t('back')) + '</a>';
+    h += '<section class="city-head"><span class="line-rule" aria-hidden="true"></span><h1>' + esc(L(c)) + krTag(c.ko) + '</h1><p>' + esc(L(c.line)) + '</p></section>';
+    h += '<div class="toolbar">';
+    h += '<nav class="seg" aria-label="View">' +
+      '<a href="#' + c.id + (catId ? '.' + catId : '') + '"' + (mode !== 'map' ? ' aria-current="page"' : '') + '>' + esc(t('list')) + '</a>' +
+      '<a href="#' + c.id + '.map' + (catId ? '.' + catId : '') + '"' + (mode === 'map' ? ' aria-current="page"' : '') + '>' + esc(t('mapTab')) + '</a></nav>';
+    h += '<nav class="chips" aria-label="Category">';
+    h += '<a class="chip" href="' + base + '"' + (!catId ? ' aria-current="page"' : '') + '>' + esc(t('all')) + '<span class="n">' + all.length + '</span></a>';
+    D.categories.forEach(function (k) {
+      var n = placesIn(c.id, k.id).length;
+      if (!n) return;
+      h += '<a class="chip" href="' + base + '.' + k.id + '"' + (catId === k.id ? ' aria-current="page"' : '') + '>' + esc(L(k)) + '<span class="n">' + n + '</span></a>';
+    });
+    h += '</nav></div>';
+    if (mode === 'map') {
+      h += '<div class="map-wrap"><div id="map" role="region" aria-label="' + esc(t('mapTab')) + '"></div><p class="note" id="map-note">' + esc(t('mapNote')) + '</p></div>';
+    } else {
+      h += '<div class="list">' + (shown.length ? shown.map(function (p) { return placeCard(p, false); }).join('') : '<div class="empty">' + esc(t('noResults')) + '</div>') + '</div>';
+    }
+    return h + '</div>';
+  }
+
+  function viewTheme(k) {
+    var h = '<div class="view">';
+    h += '<a class="back" href="#">← ' + esc(t('back')) + '</a>';
+    h += '<section class="city-head" style="--city:var(--local)"><span class="line-rule" aria-hidden="true"></span><h1>' + esc(L(k)) + krTag(k.ko) + '</h1></section>';
+    h += '<nav class="chips" aria-label="' + esc(t('themes')) + '">';
+    D.categories.forEach(function (x) {
+      var n = placesIn(null, x.id).length;
+      if (n) h += '<a class="chip" href="#all.' + x.id + '"' + (x.id === k.id ? ' aria-current="page"' : '') + '>' + esc(L(x)) + '<span class="n">' + n + '</span></a>';
+    });
+    h += '</nav><div class="list">';
+    D.cities.forEach(function (c) {
+      var ps = placesIn(c.id, k.id);
+      if (!ps.length) return;
+      h += '<h2 class="group-title" style="--city:' + cityColor(c.id) + '">' + esc(L(c)) + ' ' + krTag(c.ko, 'font-weight:400;font-size:14px;color:var(--muted)') + '</h2>';
+      h += ps.map(function (p) { return placeCard(p, false); }).join('');
+    });
+    return h + '</div></div>';
+  }
+
+  function viewShopping(gid) {
+    var g = group(gid) || D.shopping.groups[0];
+    var h = '<div class="view">';
+    h += '<a class="back" href="#">← ' + esc(t('back')) + '</a>';
+    h += '<section class="city-head" style="--city:var(--tourist)"><span class="line-rule" aria-hidden="true"></span><h1>' + esc(t('buyTitle')) + '</h1><p>' + esc(t('buySub')) + '</p></section>';
+    h += '<nav class="chips" aria-label="' + esc(t('buyTitle')) + '">';
+    D.shopping.groups.forEach(function (x) {
+      h += '<a class="chip" href="#shopping.' + x.id + '"' + (x.id === g.id ? ' aria-current="page"' : '') + '>' + esc(nameOf(x)) + (lang === 'ko' ? '' : ' <span class="kr n">' + esc(x.ko) + '</span>') + '</a>';
+    });
+    h += '</nav>';
+    h += '<p style="margin:0">' + esc(L(g.intro)) + '</p>';
+    h += '<section class="sec"><h2 class="eyebrow">' + esc(t('shopTips')) + '</h2><ul class="shop-tips">' +
+      (L(g.tips) || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></section>';
+    h += '<section class="sec"><h2 class="eyebrow">' + esc(t('shopTop')) + '</h2><div class="shop-list">';
+    g.items.forEach(function (it, i) {
+      h += '<div class="shop"><div><h3>' + esc(nameOf(it)) + ' <span class="kr">' + esc(subName(it)) + '</span></h3><p>' + esc(L(it.why)) + '</p></div>' +
+        '<button type="button" class="mini-btn" data-staff-shop="' + esc(g.id) + ':' + i + '">' + esc(t('staff')) + '</button></div>';
+    });
+    h += '</div></section>';
+    return h + '</div>';
+  }
+
+  /* ── menu translator ── */
+  var order = {};      // 한글 메뉴 이름 → 수량
+  var reqOn = {};      // 요청 문장 번호 → 선택 여부
+  var menuQuery = '';
+
+  function allDishes() {
+    var out = [];
+    D.menu.groups.forEach(function (g) { g.items.forEach(function (it) { out.push(it); }); });
+    return out;
+  }
+  function dish(ko) { return allDishes().filter(function (d) { return d.ko === ko; })[0]; }
+  function orderCount() { return Object.keys(order).reduce(function (n, k) { return n + (order[k] > 0 ? 1 : 0); }, 0); }
+  function reqCount() { return Object.keys(reqOn).filter(function (k) { return reqOn[k]; }).length; }
+
+  function dishRow(d, price, said) {
+    var n = order[d.ko] || 0;
+    var tags = '';
+    if (d.spicy) tags += '<span class="tag-chip hot">' + esc(t('spicy')) + ' ' + '●●●'.slice(0, d.spicy) + '</span>';
+    (d.tags || []).forEach(function (tg) { tags += '<span class="tag-chip">' + esc(t('tagNames')[tg] || tg) + '</span>'; });
+    return '<div class="dish' + (n ? ' on' : '') + '" data-dish-row="' + esc(d.ko) + '">' +
+      '<div class="dish-ko" lang="ko">' + esc(d.ko) + '<small>' + esc(d.rom) + '</small></div>' +
+      '<div class="qty"><button type="button" data-qty="-1" data-dish="' + esc(d.ko) + '" aria-label="−1 ' + esc(L(d.name)) + '">−</button>' +
+        '<span data-qty-n="' + esc(d.ko) + '" aria-live="polite">' + n + '</span>' +
+        '<button type="button" data-qty="1" data-dish="' + esc(d.ko) + '" aria-label="+1 ' + esc(L(d.name)) + '">+</button></div>' +
+      (said ? '<div class="dish-said"><span>' + esc(t('menuSays')) + '</span> <b lang="ko">' + esc(said) + '</b> · ' + esc(t('closest')) + '</div>' : '') +
+      '<div class="dish-main"><h3>' + esc(L(d.name)) + (price ? ' <span class="price-tag">· ' + esc(price) + '</span>' : '') + '</h3><p>' + esc(L(d.desc)) + '</p>' + (tags ? '<div class="tags">' + tags + '</div>' : '') + '</div>' +
+    '</div>';
+  }
+
+  function menuList(gid) {
+    var q = menuQuery.trim().toLowerCase();
+    if (q) {
+      var hits = allDishes().filter(function (d) {
+        var tagText = (d.tags || []).map(function (tg) { return [T.en.tagNames[tg], T.ja.tagNames[tg], T.ko.tagNames[tg]].join(' '); }).join(' ');
+        return [d.ko, d.rom, d.name.en, d.name.ja, d.desc.ko, d.desc.en, d.desc.ja, tagText].join(' ').toLowerCase().indexOf(q) !== -1;
+      });
+      return hits.length ? hits.map(function (d) { return dishRow(d); }).join('') : '<div class="empty">' + esc(t('noDish')) + '</div>';
+    }
+    var g = D.menu.groups.filter(function (x) { return x.id === gid; })[0] || D.menu.groups[0];
+    return g.items.map(function (d) { return dishRow(d); }).join('');
+  }
+
+  function viewMenu(gid) {
+    var g = D.menu.groups.filter(function (x) { return x.id === gid; })[0] || D.menu.groups[0];
+    var h = '<div class="view">';
+    h += '<a class="back" href="#">← ' + esc(t('back')) + '</a>';
+    h += '<section class="city-head" style="--city:var(--local)"><span class="line-rule" aria-hidden="true"></span><h1>' + esc(t('menuTitle')) + '</h1><p>' + esc(t('menuSub')) + '</p></section>';
+    h += scanSection();
+    h += '<div class="search">' + ICON_SEARCH + '<input id="mq" type="search" autocomplete="off" placeholder="' + esc(t('menuSearch')) + '" aria-label="' + esc(t('menuSearch')) + '" value="' + esc(menuQuery) + '"></div>';
+    h += '<nav class="chips" id="menu-chips" aria-label="' + esc(t('menuTitle')) + '"' + (menuQuery.trim() ? ' hidden' : '') + '>';
+    D.menu.groups.forEach(function (x) {
+      h += '<a class="chip" href="#menu.' + x.id + '"' + (x.id === g.id ? ' aria-current="page"' : '') + '>' + esc(lang === 'ko' ? x.ko : L(x)) + (lang === 'ko' ? '' : ' <span class="kr n">' + esc(x.ko) + '</span>') + '</a>';
+    });
+    h += '</nav>';
+    h += '<div class="dishes" id="dishes">' + menuList(g.id) + '</div>';
+    h += '<section class="sec"><h2 class="eyebrow">' + esc(t('requests')) + '</h2><div class="reqs">';
+    D.menu.requests.forEach(function (r, i) {
+      h += '<button type="button" class="req" data-req="' + i + '" aria-pressed="' + String(!!reqOn[i]) + '">' + esc(lang === 'ko' ? r.ko : L(r)) + '</button>';
+    });
+    h += '</div></section>';
+    h += '<p class="note">' + esc(t('papago')) + ' <a href="https://papago.naver.com" target="_blank" rel="noopener">Papago ↗</a></p>';
+    return h + '</div>';
+  }
+
+  function bindMenuSearch(gid) {
+    var q = document.getElementById('mq');
+    if (!q) return;
+    q.addEventListener('input', function () {
+      menuQuery = q.value;
+      document.getElementById('dishes').innerHTML = menuList(gid);
+      document.getElementById('menu-chips').hidden = !!menuQuery.trim();
+    });
+  }
+
+  function updateOrderBar() {
+    var bar = document.getElementById('orderbar');
+    var onMenu = (location.hash || '').replace(/^#/, '').split('.')[0] === 'menu';
+    var n = orderCount();
+    var show = onMenu && (n > 0 || reqCount() > 0);
+    bar.hidden = !show;
+    document.body.classList.toggle('has-orderbar', show);
+    if (!show) return;
+    bar.innerHTML = '<div class="orderbar-in">' +
+      '<button type="button" class="btn" data-order-clear>' + esc(t('clear')) + '</button>' +
+      '<button type="button" class="btn primary" data-order-show>' + esc(t('showOrder')) + (n ? ' · ' + esc(t('myOrder')(n)) : '') + '</button></div>';
+  }
+
+  function changeQty(ko, delta) {
+    var n = Math.max(0, Math.min(99, (order[ko] || 0) + delta));
+    if (n) order[ko] = n; else delete order[ko];
+    document.querySelectorAll('[data-qty-n="' + CSS.escape(ko) + '"]').forEach(function (el) { el.textContent = n; });
+    document.querySelectorAll('[data-dish-row="' + CSS.escape(ko) + '"]').forEach(function (el) { el.classList.toggle('on', n > 0); });
+    updateOrderBar();
+  }
+
+  function openOrderSlip() {
+    var keys = Object.keys(order).filter(function (k) { return order[k] > 0; });
+    var reqs = D.menu.requests.filter(function (r, i) { return reqOn[i]; });
+    var lines = keys.map(function (k) { var d = dish(k); return '<div><span>' + esc(k) + '</span><b>' + order[k] + esc(d.unit) + '</b></div>'; }).join('');
+    var meanLang = lang === 'ko' ? 'en' : lang;
+    var mean = keys.map(function (k) { var d = dish(k); return '<div>' + esc(d.name[meanLang] || d.name.en) + ' × ' + order[k] + '</div>'; }).join('') +
+      reqs.map(function (r) { return '<div>' + esc(r[meanLang] || r.en) + '</div>'; }).join('');
+    var html =
+      (keys.length ? '<div class="order-lines" lang="ko">' + lines + '</div><div class="big" lang="ko" style="font-size:22px">주세요. 감사합니다!</div>' : '') +
+      (reqs.length ? '<div class="order-reqs" lang="ko">' + reqs.map(function (r) { return '<div>' + esc(r.ko) + '</div>'; }).join('') + '</div>' : '') +
+      '<div class="mean order-mean">' + mean + '</div>';
+    openStaffRaw('이렇게 주문할게요 🙏', html);
+  }
+
+  /* ── menu scan (on-device OCR, free) ──
+   * 사진 속 한글을 휴대폰 안에서 읽어요 (Tesseract.js). 서버로 보내지 않아서 비용이 없어요.
+   */
+  var scan = { state: 'idle', img: '', progress: 0, found: [], other: '', deviceOut: '' };
+  var ocrWorker = null;
+
+  function normKo(s) { return String(s).replace(/[^가-힣]/g, ''); }
+  function dishIndex() {
+    return allDishes().map(function (d) { return { d: d, k: normKo(d.ko) }; })
+      .sort(function (a, b) { return b.k.length - a.k.length; });
+  }
+  function findInLine(line, index) {
+    var n = normKo(line), used = [], found = [];
+    index.forEach(function (e) {
+      var len = e.k.length;
+      if (len < 2 || n.length < len) return;
+      for (var i = 0; i + len <= n.length; i++) {
+        var diff = 0;
+        for (var j = 0; j < len && diff <= 1; j++) if (n[i + j] !== e.k[j]) diff++;
+        if (!(diff === 0 || (diff === 1 && len >= 4))) continue;
+        if (used.some(function (u) { return i < u[1] && i + len > u[0]; })) continue;
+        used.push([i, i + len]);
+        found.push(e.d);
+        return;
+      }
+    });
+    return found;
+  }
+  function priceIn(line) {
+    var m = String(line).match(/\d{1,3}(?:[,.]\d{3})+|\d{4,6}/g);
+    if (!m) return '';
+    var v = parseInt(m[m.length - 1].replace(/[,.]/g, ''), 10);
+    return v >= 500 && v <= 500000 ? '₩' + v.toLocaleString('en-US') : '';
+  }
+  function analyze(text) {
+    var index = dishIndex(), seen = {}, found = [], other = [];
+    String(text).split('\n').forEach(function (line) {
+      if (!normKo(line)) return;
+      var hits = findInLine(line, index);
+      if (!hits.length) { other.push(line.replace(/\s+/g, ' ').trim()); return; }
+      var price = hits.length === 1 ? priceIn(line) : '';
+      var said = line.replace(/[\d,.\s원₩]+$/, '').replace(/\s+/g, ' ').trim();
+      hits.forEach(function (d) {
+        if (seen[d.ko]) return;
+        seen[d.ko] = 1;
+        // 메뉴판 글자가 사전 이름과 정확히 같지 않으면(예: 돼지갈비찜 → 돼지갈비) "메뉴판 글자"를 함께 보여줘요
+        var saidK = normKo(said);
+        var exact = saidK.length === hits.reduce(function (n, x) { return n + normKo(x.ko).length; }, 0) &&
+          hits.every(function (x) { return saidK.indexOf(normKo(x.ko)) !== -1; });
+        found.push({ d: d, price: price, said: exact ? '' : said });
+      });
+    });
+    return { found: found, other: other.join('\n') };
+  }
+
+  function prepImage(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var max = 1800, sc = Math.min(1, max / Math.max(img.width, img.height));
+        var c = document.createElement('canvas');
+        c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+        var g = c.getContext('2d');
+        g.drawImage(img, 0, 0, c.width, c.height);
+        var px = g.getImageData(0, 0, c.width, c.height), d = px.data;
+        for (var i = 0; i < d.length; i += 4) {
+          var y = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          y = Math.max(0, Math.min(255, (y - 128) * 1.35 + 128));
+          d[i] = d[i + 1] = d[i + 2] = y;
+        }
+        g.putImageData(px, 0, 0);
+        var t = document.createElement('canvas'), ts = 128 / Math.max(img.width, img.height);
+        t.width = Math.round(img.width * ts); t.height = Math.round(img.height * ts);
+        t.getContext('2d').drawImage(img, 0, 0, t.width, t.height);
+        URL.revokeObjectURL(url);
+        resolve({ canvas: c, thumb: t.toDataURL('image/jpeg', 0.7) });
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('image')); };
+      img.src = url;
+    });
+  }
+
+  var scanToken = 0;          // 새 스캔이나 취소가 생기면 1씩 올라가서, 늦게 도착한 이전 결과를 버려요
+  var MAX_FILE = 40 * 1024 * 1024;
+  var LOAD_TIMEOUT = 60000;
+
+  function withTimeout(p, ms, code) {
+    return new Promise(function (resolve, reject) {
+      var id = setTimeout(function () { reject(new Error(code)); }, ms);
+      p.then(function (v) { clearTimeout(id); resolve(v); }, function (e) { clearTimeout(id); reject(e); });
+    });
+  }
+
+  function getWorker() {
+    if (ocrWorker) return ocrWorker;
+    // 모든 파일은 이 사이트의 vendor/ocr 폴더에서만 불러와요 (외부 서버로 사진을 보내지 않음)
+    ocrWorker = withTimeout(window.Tesseract.createWorker('kor', 1, {
+      workerPath: 'vendor/ocr/worker.min.js', corePath: 'vendor/ocr/core', langPath: 'vendor/ocr/lang', gzip: true,
+      errorHandler: function () {},   // 실패는 아래 catch에서 화면 메시지로 처리해요
+      logger: function (m) {
+        if (m.status === 'recognizing text' && (scan.state === 'reading')) { scan.progress = Math.round(m.progress * 100); paintScan(); }
+      }
+    }), LOAD_TIMEOUT, 'load');
+    ocrWorker.catch(function () { ocrWorker = null; });
+    return ocrWorker;
+  }
+
+  function stopWorker() {
+    if (!ocrWorker) return;
+    var w = ocrWorker;
+    ocrWorker = null;
+    w.then(function (x) { return x.terminate(); }).catch(function () {});
+  }
+
+  function cancelScan() {
+    scanToken++;
+    stopWorker();   // 읽는 중이던 작업을 멈춰요. 다음 스캔 때 다시 준비해요.
+    scan = { state: 'idle', img: '', progress: 0, found: [], other: '', deviceOut: '' };
+    paintScan();
+  }
+
+  function scanFail(code) {
+    scan.state = 'error';
+    scan.error = code;
+    paintScan();
+  }
+
+  function runScan(file) {
+    if (!file) return;                          // 카메라/사진 고르기를 취소한 경우
+    if (scan.state === 'loading' || scan.state === 'reading') cancelScan();
+    var token = ++scanToken;
+    scan = { state: 'loading', img: '', progress: 0, found: [], other: '', deviceOut: '' };
+    if (!window.Tesseract) return scanFail('load');
+    if (file.type && file.type.indexOf('image/') !== 0) return scanFail('type');
+    if (file.size > MAX_FILE) return scanFail('size');
+    paintScan();
+    prepImage(file).then(function (prep) {
+      if (token !== scanToken) return null;
+      scan.img = prep.thumb;
+      paintScan();
+      return getWorker().then(function (w) {
+        if (token !== scanToken) return null;
+        scan.state = 'reading'; paintScan();
+        return w.recognize(prep.canvas);
+      });
+    }).then(function (r) {
+      if (!r || token !== scanToken) return;
+      var a = analyze(r.data.text);
+      scan.state = 'done'; scan.found = a.found; scan.other = a.other;
+      paintScan();
+    }).catch(function (e) {
+      if (token !== scanToken) return;
+      var code = e && e.message === 'image' ? 'type' : e && e.message === 'load' ? 'load' : 'read';
+      if (code === 'load') stopWorker();
+      scanFail(code);
+    });
+  }
+
+  function scanBody() {
+    var h = '';
+    if (scan.state === 'loading' || scan.state === 'reading') {
+      var label = scan.state === 'loading' ? t('scanLoading') : t('scanReading') + ' ' + scan.progress + '%';
+      h += '<div class="scan-status">' + (scan.img ? '<img src="' + scan.img + '" alt="">' : '<span></span>') +
+        '<div><div class="note" role="status">' + esc(label) + '</div><div class="bar-track"><div class="bar-fill" style="width:' + (scan.state === 'loading' ? 8 : scan.progress) + '%"></div></div>' +
+        '<button type="button" class="mini-btn" style="margin-top:8px" data-scan-cancel>' + esc(t('cancel')) + '</button></div></div>';
+    } else if (scan.state === 'error') {
+      var msg = { type: t('scanNotImage'), size: t('scanTooBig'), load: t('scanLoadFail') }[scan.error] || t('scanError');
+      h += '<div class="empty" role="alert">' + esc(msg) + '</div>';
+    } else if (scan.state === 'done') {
+      h += '<div class="scan-status">' + (scan.img ? '<img src="' + scan.img + '" alt="">' : '<span></span>') + '<h3 class="eyebrow">' + esc(t('found')) + ' · ' + scan.found.length + '</h3></div>';
+      if (scan.found.length) {
+        h += '<div class="dishes">' + scan.found.map(function (f) { return dishRow(f.d, f.price, f.said); }).join('') + '</div>';
+      } else {
+        h += '<div class="empty">' + esc(t('foundNone')) + '</div>';
+      }
+      if (scan.other) {
+        h += '<div class="sec"><h3 class="eyebrow">' + esc(t('otherText')) + '</h3><pre class="other-text" lang="ko">' + esc(scan.other) + '</pre>';
+        if (lang !== 'ko') {
+          h += '<div class="links" style="display:flex;flex-wrap:wrap;gap:8px">' +
+            '<a class="mini-btn" target="_blank" rel="noopener" href="' + esc('https://translate.google.com/?sl=ko&tl=' + lang + '&op=translate&text=' + encodeURIComponent(scan.other.slice(0, 1500))) + '">' + esc(t('translateGoogle')) + '</a>' +
+            ('Translator' in window ? '<button type="button" class="mini-btn" data-device-translate>' + esc(t('translateDevice')) + '</button>' : '') + '</div>';
+          if (scan.deviceOut) h += '<pre class="device-out">' + esc(scan.deviceOut) + '</pre>';
+        }
+        h += '</div>';
+      }
+    }
+    return h;
+  }
+  function paintScan() {
+    var el = document.getElementById('scan-body');
+    if (el) el.innerHTML = scanBody();
+  }
+
+  function deviceTranslate() {
+    // 크롬 등 일부 브라우저에 들어 있는 기기 내장 번역 (무료). 없으면 버튼이 안 보여요.
+    window.Translator.create({ sourceLanguage: 'ko', targetLanguage: lang })
+      .then(function (tr) { return tr.translate(scan.other); })
+      .then(function (out) { scan.deviceOut = out; paintScan(); })
+      .catch(function () { scan.deviceOut = t('scanError'); paintScan(); });
+  }
+
+  function scanSection() {
+    var h = '<section class="scan" aria-labelledby="scan-title">';
+    h += '<h2 id="scan-title">' + esc(t('scanTitle')) + '</h2><p class="note" style="font-size:14px">' + esc(t('scanSub')) + '</p>';
+    h += '<div class="scan-btns">' +
+      '<label class="btn primary"><input id="scan-cam" type="file" accept="image/*" capture="environment" data-scan>' + esc(t('takePhoto')) + '</label>' +
+      '<label class="btn"><input id="scan-pick" type="file" accept="image/*" data-scan>' + esc(t('choosePhoto')) + '</label></div>';
+    h += '<div id="scan-body">' + scanBody() + '</div>';
+    h += '<p class="note">' + esc(t('scanTip')) + '</p>';
+    h += '<details class="cam-guide"><summary>' + esc(t('camTitle')) + '</summary><ol>' +
+      t('camSteps').map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>' +
+      '<p style="margin:10px 0 0"><a class="mini-btn" target="_blank" rel="noopener" href="' + esc('https://translate.google.com/?sl=ko&tl=' + (lang === 'ko' ? 'en' : lang) + '&op=images') + '">' + esc(t('camLink')) + '</a></p></details>';
+    return h + '</section>';
+  }
+
+  /* ── map (Leaflet) ── */
+  var mapInst = null;
+  function destroyMap() { if (mapInst) { mapInst.remove(); mapInst = null; } }
+
+  function drawMap(c, catId) {
+    var el = document.getElementById('map');
+    if (!el || !window.L) return;
+    var pins = placesIn(c.id, catId).filter(function (p) { return typeof p.lat === 'number' && typeof p.lng === 'number'; });
+    var note = document.getElementById('map-note');
+    if (!pins.length) {
+      el.outerHTML = '<div class="empty">' + esc(t('noPins')) + '</div>';
+      if (note) note.hidden = true;
+      return;
+    }
+    mapInst = window.L.map(el, { scrollWheelZoom: false });
+    var tiles = window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+    }).addTo(mapInst);
+    var warned = false;
+    tiles.on('tileerror', function () {
+      if (warned || !note) return;
+      warned = true;
+      note.textContent = t('tileFail') + ' ' + t('mapNote');
+    });
+    var bounds = [];
+    pins.forEach(function (p) {
+      var icon = window.L.divIcon({
+        className: '',
+        html: '<div class="lp-pin" style="--pc:' + cityColor(p.city) + '"><span></span></div>',
+        iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -24]
+      });
+      window.L.marker([p.lat, p.lng], { icon: icon, title: nameOf(p), alt: nameOf(p) })
+        .addTo(mapInst)
+        .bindPopup('<div class="pop"><span class="eyebrow">' + esc(L(cat(p.cat))) + '</span><strong>' + esc(nameOf(p)) + '</strong><span class="ko">' + esc(subName(p)) + '</span>' +
+          '<button type="button" data-place="' + esc(p.id) + '">' + esc(t('details')) + '</button></div>');
+      bounds.push([p.lat, p.lng]);
+    });
+    if (bounds.length === 1) mapInst.setView(bounds[0], 14);
+    else mapInst.fitBounds(bounds, { padding: [36, 36], maxZoom: 15 });
+  }
+
+  /* ── router: #seoul  #seoul.cafe  #seoul.map  #seoul.map.cafe  #all.kids  #shopping.pharmacy ── */
+  function render() {
+    destroyMap();
+    var hash = (location.hash || '').replace(/^#/, '');
+    var parts = hash.split('.');
+    var app = document.getElementById('app');
+    var c = city(parts[0]);
+
+    if (c) {
+      var mode = parts[1] === 'map' ? 'map' : 'list';
+      var rawCat = mode === 'map' ? parts[2] : parts[1];
+      var catId = rawCat && cat(rawCat) ? rawCat : null;
+      app.innerHTML = viewCity(c, catId, mode);
+      document.title = L(c) + ' · LocalPick Korea';
+      if (mode === 'map') drawMap(c, catId);
+    } else if (parts[0] === 'all' && cat(parts[1])) {
+      app.innerHTML = viewTheme(cat(parts[1]));
+      document.title = L(cat(parts[1])) + ' · LocalPick Korea';
+    } else if (parts[0] === 'menu') {
+      app.innerHTML = viewMenu(parts[1]);
+      document.title = t('menuTitle') + ' · LocalPick Korea';
+      bindMenuSearch(parts[1]);
+    } else if (parts[0] === 'shopping') {
+      app.innerHTML = viewShopping(parts[1]);
+      document.title = t('buyTitle') + ' · LocalPick Korea';
+    } else {
+      app.innerHTML = viewHome();
+      document.title = 'LocalPick Korea';
+      bindSearch();
+    }
+    document.getElementById('foot').textContent = t('foot');
+    updateOrderBar();
+  }
+
+  function bindSearch() {
+    var q = document.getElementById('q');
+    if (!q) return;
+    q.addEventListener('input', function () {
+      searchText = q.value;
+      document.getElementById('home-body').innerHTML = homeBody();
+    });
+  }
+
+  /* ── place sheet ── */
+  var openPlaceId = null;
+  var lastFocus = null;
+
+  function openSheet(id) {
+    var p = place(id);
+    if (!p) return;
+    if (!openPlaceId) lastFocus = document.activeElement;
+    openPlaceId = id;
+    if (mapInst) mapInst.closePopup();
+    var c = city(p.city);
+    var h = '<div class="grab" aria-hidden="true"></div>';
+    h += '<div class="sheet-head" style="--city:' + cityColor(p.city) + '"><div><span class="eyebrow" style="color:var(--city)">' + esc(L(c)) + ' · ' + esc(L(cat(p.cat))) + '</span>' +
+      '<h2 id="sheet-title">' + esc(nameOf(p)) + '</h2><div class="ko-big">' + esc(subName(p)) + '</div></div>' +
+      '<button type="button" class="x" data-close aria-label="' + esc(t('close')) + '">×</button></div>';
+    h += '<div style="--city:' + cityColor(p.city) + '">' + heroPhoto(p) + '</div>';
+    h += '<div class="sub"><span>' + esc(L(p.area)) + '</span><span class="price">' + esc(t('price')[p.price] || p.price) + '</span></div>';
+    h += meter(p);
+    if (p.insteadOf) h += '<div class="instead"><span>' + esc(t('insteadOf')) + '</span><s>' + esc(L(p.insteadOf)) + '</s></div>';
+    h += '<div><h4>' + esc(t('why')) + '</h4><p>' + esc(L(p.why)) + '</p></div>';
+    var tips = L(p.tips);
+    if (tips && tips.length) h += '<div><h4>' + esc(t('tips')) + '</h4><ul>' + tips.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
+    h += '<div class="actions">' +
+      '<a class="btn primary wide" href="' + esc(naverUrl(p.map || p.ko)) + '" target="_blank" rel="noopener">' + ICON_PIN + esc(t('map')) + '</a>' +
+      '<button type="button" class="btn" data-staff-place="' + esc(p.id) + '">' + esc(t('staff')) + '</button>' +
+      '<button type="button" class="btn" data-copy="' + esc(p.ko) + '">' + esc(t('copy')) + '</button>' +
+    '</div>';
+    h += '<div class="say"><h4>' + esc(t('say')) + '</h4><div class="links">' +
+      '<a class="mini-btn" href="' + esc(translated(blogUrl(p.map || p.ko))) + '" target="_blank" rel="noopener">' + esc(t('sayNaver')) + ' ↗</a>' +
+      (lang === 'ko' ? '' : '<a class="mini-btn" href="' + esc(blogUrl(p.map || p.ko)) + '" target="_blank" rel="noopener">' + esc(t('sayOriginal')) + ' ↗</a>') +
+      '<a class="mini-btn" href="' + esc(instaUrl(p.ko)) + '" target="_blank" rel="noopener">' + esc(t('sayInsta')) + ' ↗</a>' +
+      '</div><p class="note">' + esc(t('sayNote')) + '</p></div>';
+    if (p.cat === 'eat' || p.cat === 'musteat') h += '<a class="promo" href="#menu"><div><span class="k">' + esc(t('menuPromoK')) + '</span><h3>' + esc(t('menuPromo')) + '</h3></div><span class="go" aria-hidden="true">→</span></a>';
+    h += '<p class="note">' + esc(t('naverNote')) + '</p>';
+
+    var sheet = document.getElementById('sheet');
+    sheet.innerHTML = h;
+    document.getElementById('sheet-scrim').hidden = false;
+    document.body.style.overflow = 'hidden';
+    sheet.scrollTop = 0;
+    var x = sheet.querySelector('[data-close]');
+    if (x) x.focus();
+  }
+
+  function closeSheet() {
+    openPlaceId = null;
+    document.getElementById('sheet-scrim').hidden = true;
+    document.body.style.overflow = '';
+    if (lastFocus && lastFocus.focus && document.contains(lastFocus)) lastFocus.focus();
+  }
+
+  /* ── show-to-staff screen ── */
+  function openStaff(korean, meaning, placeKo) {
+    openStaffRaw('사장님, 이거 봐 주세요 🙏',
+      (placeKo ? '<div class="place" lang="ko">' + esc(placeKo) + '</div>' : '') +
+      '<div class="big" lang="ko">' + esc(korean) + '</div>' +
+      '<div class="mean">' + esc(meaning) + '</div>');
+  }
+  function openStaffRaw(greeting, inner) {
+    var el = document.getElementById('staff');
+    el.innerHTML =
+      '<div class="staff-top"><span class="eyebrow">' + esc(t('staffTop')) + '</span>' +
+      '<button type="button" class="x" data-staff-close aria-label="' + esc(t('close')) + '">×</button></div>' +
+      '<div class="slip"><div class="to-staff" lang="ko">' + esc(greeting) + '</div>' + inner + '</div><div></div>';
+    el.hidden = false;
+    var x = el.querySelector('[data-staff-close]');
+    if (x) x.focus();
+    if (navigator.wakeLock && navigator.wakeLock.request) {
+      navigator.wakeLock.request('screen').then(function (l) { el._lock = l; }).catch(function () {});
+    }
+  }
+  function closeStaff() {
+    var el = document.getElementById('staff');
+    el.hidden = true;
+    if (el._lock) { el._lock.release().catch(function () {}); el._lock = null; }
+    var back = document.querySelector('#sheet [data-staff-place]');
+    if (back && openPlaceId) back.focus();
+  }
+
+  function copyText(text, btn) {
+    var done = function () {
+      var old = btn.textContent;
+      btn.textContent = t('copied');
+      setTimeout(function () { btn.textContent = old; }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallbackSelect(); });
+    } else { fallbackSelect(); }
+  }
+  function fallbackSelect() {
+    var big = document.querySelector('#sheet .ko-big');
+    if (!big) return;
+    var r = document.createRange(); r.selectNodeContents(big);
+    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
+
+  /* ── events ── */
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-lang],[data-place],[data-close],[data-staff-place],[data-staff-shop],[data-staff-close],[data-copy],[data-qty],[data-req],[data-order-show],[data-order-clear],[data-device-translate],[data-scan-cancel]');
+    if (!el) {
+      if (e.target.id === 'sheet-scrim') closeSheet();
+      return;
+    }
+    if (el.dataset.lang) return setLang(el.dataset.lang);
+    if (el.dataset.place) return openSheet(el.dataset.place);
+    if (el.hasAttribute('data-close')) return closeSheet();
+    if (el.hasAttribute('data-staff-close')) return closeStaff();
+    if (el.dataset.staffPlace) {
+      var p = place(el.dataset.staffPlace);
+      return openStaff(p.order.ko, lang === 'ko' ? p.order.en : L(p.order), p.ko);
+    }
+    if (el.dataset.staffShop) {
+      var ref = el.dataset.staffShop.split(':');
+      var g = group(ref[0]);
+      var it = g && g.items[+ref[1]];
+      if (it) return openStaff(it.ko + ' 어디 있어요?', (lang === 'ko' ? it.name.en + ' · Where is this?' : L(it.name) + ' · ' + t('whereIs')), g.ko);
+      return;
+    }
+    if (el.dataset.copy) return copyText(el.dataset.copy, el);
+    if (el.dataset.qty) return changeQty(el.dataset.dish, +el.dataset.qty);
+    if (el.dataset.req != null) {
+      var i = +el.dataset.req;
+      reqOn[i] = !reqOn[i];
+      el.setAttribute('aria-pressed', String(!!reqOn[i]));
+      return updateOrderBar();
+    }
+    if (el.hasAttribute('data-order-show')) return openOrderSlip();
+    if (el.hasAttribute('data-device-translate')) return deviceTranslate();
+    if (el.hasAttribute('data-scan-cancel')) return cancelScan();
+    if (el.hasAttribute('data-order-clear')) {
+      order = {}; reqOn = {};
+      return render();
+    }
+  });
+
+  document.addEventListener('change', function (e) {
+    if (e.target.hasAttribute && e.target.hasAttribute('data-scan')) {
+      runScan(e.target.files && e.target.files[0]);
+      e.target.value = '';
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (!document.getElementById('staff').hidden) closeStaff();
+    else if (openPlaceId) closeSheet();
+  });
+
+  window.addEventListener('hashchange', function () {
+    if (openPlaceId) closeSheet();
+    searchText = '';
+    menuQuery = '';
+    render();
+    window.scrollTo(0, 0);
+  });
+
+  setLang(lang);
+})();
+</script>
+</body>
+</html>
