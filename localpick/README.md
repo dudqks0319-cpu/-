@@ -10,7 +10,7 @@
 | `data.js` | 도시·장소·필수템 같은 **내용** | 자주 (여기만 고치면 돼요) |
 | `index.html` | 화면 디자인과 동작 | 가끔 |
 | `photos/` | 장소 사진 넣는 폴더 | 사진 추가할 때 |
-| `vendor/` | 지도 기능(Leaflet) 프로그램 | 안 고쳐요 |
+| `vendor/` | 지도(Leaflet)·글자 읽기(Tesseract) 프로그램 | 안 고쳐요 |
 
 ## 장소 추가하는 법
 
@@ -48,6 +48,14 @@
 음식 한 줄을 복사해서 `ko`(메뉴판 한글), `rom`(읽는 법), `name`·`desc`(언어별 이름·설명)를 바꾸면 됩니다.
 `requests`는 주문할 때 같이 보여줄 요청 문장이에요 (예: 덜 맵게 해 주세요).
 
+## 메뉴판 사진 스캔은 어떻게 돌아가나요?
+
+- 사진 속 한글을 **휴대폰 안에서** 읽어요 (`vendor/ocr`의 Tesseract.js). 사진을 서버로 보내지 않아서 **비용이 0원**이에요.
+- 읽은 글자를 `data.js`의 메뉴 사전과 맞춰 보고, 찾은 음식을 그 나라 말로 보여줘요. 가격도 같은 줄에서 찾아 붙여요.
+- 사전에 없는 글자는 "다른 글자"로 보여주고, 구글 번역 링크(무료)로 번역할 수 있어요.
+- 처음 한 번은 읽기 프로그램 약 6MB를 내려받아요.
+- **사전에 음식을 많이 넣을수록 스캔이 똑똑해져요.**
+
 ## 새 언어 추가하는 법 (예: 중국어)
 
 1. `index.html`의 `LANGS`에 한 줄 추가: `{ id: 'zh-TW', label: '繁體中文' }`
@@ -68,4 +76,5 @@
 
 ## 사용한 것
 
+- 글자 읽기(OCR): [Tesseract.js](https://github.com/naptha/tesseract.js) (Apache-2.0 라이선스, `vendor/ocr/TESSERACT-LICENSE`)
 - 지도: [Leaflet](https://leafletjs.com) (BSD-2 라이선스, `vendor/LEAFLET-LICENSE`) + [OpenStreetMap](https://www.openstreetmap.org/copyright) 지도 타일
