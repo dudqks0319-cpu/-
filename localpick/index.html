@@ -27,6 +27,7 @@
   --c-gyeongju: #7247a6;
   --sign-ink: #ffffff;
   --map-empty: #e4e9e5;
+  --spicy: #c8372d;
   --shadow: 0 1px 2px rgba(21, 33, 29, .06), 0 4px 16px rgba(21, 33, 29, .06);
   --display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
   --body: "IBM Plex Sans", "IBM Plex Sans JP", "IBM Plex Sans KR", "Hiragino Sans", "Apple SD Gothic Neo", system-ui, sans-serif;
@@ -38,7 +39,7 @@
     --bg: #0e1513; --surface: #17201d; --ink: #e5ece9; --muted: #9aaba5; --line: #2a3632;
     --local: #3cc59c; --local-soft: #173a30; --tourist: #e3ac4c; --tourist-soft: #3a2f19;
     --c-seoul: #7c97f2; --c-busan: #4fc1d8; --c-jeonju: #e08a62; --c-gyeongju: #b28ce4;
-    --sign-ink: #0e1513; --map-empty: #1d2724;
+    --sign-ink: #0e1513; --map-empty: #1d2724; --spicy: #f07a6e;
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
     color-scheme: dark;
   }
@@ -47,7 +48,7 @@
   --bg: #0e1513; --surface: #17201d; --ink: #e5ece9; --muted: #9aaba5; --line: #2a3632;
   --local: #3cc59c; --local-soft: #173a30; --tourist: #e3ac4c; --tourist-soft: #3a2f19;
   --c-seoul: #7c97f2; --c-busan: #4fc1d8; --c-jeonju: #e08a62; --c-gyeongju: #b28ce4;
-  --sign-ink: #0e1513; --map-empty: #1d2724;
+  --sign-ink: #0e1513; --map-empty: #1d2724; --spicy: #f07a6e;
   --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
   color-scheme: dark;
 }
@@ -361,6 +362,7 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
   padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
 }
 .staff-top { display: flex; justify-content: space-between; align-items: center; }
+.staff .slip { max-height: 100%; overflow-y: auto; }
 .slip {
   align-self: center; justify-self: center; width: 100%; max-width: 520px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 28px 22px;
@@ -370,6 +372,50 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
 .slip .big { font-family: var(--kr); font-weight: 600; font-size: clamp(30px, 8.5vw, 44px); line-height: 1.3; word-break: keep-all; }
 .slip .place { font-family: var(--kr); font-size: 15px; color: var(--local); font-weight: 600; }
 .slip .mean { font-size: 14px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 14px; }
+
+/* menu translator */
+.promo {
+  display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; text-decoration: none;
+  padding: 16px; border-radius: var(--radius); background: var(--local-soft);
+  border: 1px solid color-mix(in srgb, var(--local) 25%, transparent);
+}
+.promo .k { font-family: var(--kr); font-weight: 700; font-size: 13px; color: var(--local); }
+.promo h3 { font-family: var(--display); font-weight: 600; font-size: 19px; }
+.promo p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.promo .go { font-size: 22px; color: var(--local); }
+.dishes { display: grid; gap: 8px; }
+.dish {
+  display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center;
+  padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+}
+.dish.on { border-color: var(--local); box-shadow: 0 0 0 1px var(--local) inset; }
+.dish-ko { font-family: var(--kr); font-weight: 700; font-size: 24px; line-height: 1.2; word-break: keep-all; }
+.dish-ko small { font-family: var(--body); font-weight: 400; font-size: 12px; color: var(--muted); margin-left: 6px; }
+.dish-main { grid-column: 1 / -1; display: grid; gap: 4px; }
+.dish-main h3 { font-size: 15px; font-weight: 600; }
+.dish-main p { margin: 0; font-size: 13px; color: var(--muted); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-chip { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+.tag-chip.hot { color: var(--spicy); border-color: color-mix(in srgb, var(--spicy) 40%, transparent); }
+.qty { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.qty button { width: 38px; height: 36px; border: 0; background: var(--bg); cursor: pointer; font-size: 18px; font-weight: 600; }
+.qty span { min-width: 28px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
+.reqs { display: flex; flex-wrap: wrap; gap: 8px; }
+.req { padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 13px; text-align: left; }
+.req[aria-pressed="true"] { background: var(--local); border-color: var(--local); color: #fff; }
+.orderbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 1500;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--bg) 92%, transparent); border-top: 1px solid var(--line);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.orderbar-in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; }
+.has-orderbar main { padding-bottom: 110px; }
+.order-lines { display: grid; gap: 8px; text-align: left; }
+.order-lines div { display: flex; justify-content: space-between; gap: 12px; font-family: var(--kr); font-weight: 600; font-size: clamp(22px, 6.5vw, 32px); line-height: 1.25; word-break: keep-all; }
+.order-lines div b { color: var(--local); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.order-reqs { display: grid; gap: 4px; font-family: var(--kr); font-size: 18px; font-weight: 600; text-align: left; border-top: 1px dashed var(--line); padding-top: 12px; }
+.order-mean { display: grid; gap: 2px; text-align: left; }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
@@ -394,6 +440,8 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
 
 <div class="staff" id="staff" role="dialog" aria-modal="true" aria-label="Show to staff" hidden></div>
 
+<div class="orderbar" id="orderbar" hidden></div>
+
 <script src="vendor/leaflet.js"></script>
 <script src="data.js"></script>
 <script>
@@ -407,7 +455,8 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
    */
   var LANGS = [
     { id: 'en', label: 'EN' },
-    { id: 'ja', label: '日本語' }
+    { id: 'ja', label: '日本語' },
+    { id: 'ko', label: '한국어' }
   ];
 
   var T = {
@@ -431,7 +480,15 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
       results: function (n) { return n + (n === 1 ? ' place' : ' places'); },
       shopTips: 'Before you shop', shopTop: 'Top picks', whereIs: 'Where is this?',
       say: 'What Koreans say', sayNaver: 'Naver blog reviews', sayInsta: 'Instagram posts',
-      sayNote: 'These pages are in Korean. Use your browser’s Translate button (Chrome: ⋮ → Translate, Safari: aA → Translate Website).',
+      sayNote: 'Opens in your language through Google Translate. If a page does not translate, open the original and use your browser’s Translate button. On Instagram, tap “See translation” under a post.',
+      sayOriginal: 'Original',
+      menuTitle: 'Menu translator', menuSub: 'Find the Korean words on the menu, tap + to add them, then show your order to the staff.',
+      menuPromoK: '메뉴판 번역기', menuPromo: 'Can’t read the menu?', menuPromoSub: '51 Korean dishes explained. Build your order and show it to the staff.',
+      menuSearch: 'Search: bibimbap, pork, noodles…', requests: 'Add a request', myOrder: function (n) { return n + (n === 1 ? ' item' : ' items'); },
+      showOrder: 'Show order to staff', clear: 'Clear', spicy: 'Spicy', openMenu: 'Menu translator',
+      tagNames: { pork: 'Pork', beef: 'Beef', chicken: 'Chicken', seafood: 'Seafood' },
+      papago: 'Long menu? Take a photo with Papago’s camera mode to translate all of it.',
+      noDish: 'No dish matches that search.',
       noPins: 'These are dishes you can find all over the city, so they have no pins. Open the list to read about them.',
       mapNote: 'Pins show approximate locations. Use Naver Map for exact directions.',
       tileFail: 'The map background could not load here. The pins still work.',
@@ -464,7 +521,15 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
       results: function (n) { return n + '件'; },
       shopTips: '買い物の前に', shopTop: 'おすすめ', whereIs: 'どこにありますか？',
       say: '韓国人の口コミ', sayNaver: 'NAVERブログの口コミ', sayInsta: 'Instagramの投稿',
-      sayNote: 'ページは韓国語です。ブラウザの翻訳機能を使ってください（Chrome：⋮ → 翻訳、Safari：ぁあ → Webサイトを翻訳）。',
+      sayNote: 'Google翻訳を通して日本語で開きます。翻訳されない場合は原文を開き、ブラウザの翻訳機能を使ってください。Instagramでは投稿の下の「翻訳を見る」をタップ。',
+      sayOriginal: '原文',
+      menuTitle: 'メニュー翻訳', menuSub: 'メニューの韓国語を探して＋で追加。注文をお店の人に見せましょう。',
+      menuPromoK: '메뉴판 번역기', menuPromo: 'メニューが読めない？', menuPromoSub: '韓国料理51品を解説。注文を作ってお店の人に見せられます。',
+      menuSearch: '検索：ビビンバ、豚肉、麺…', requests: 'リクエストを追加', myOrder: function (n) { return n + '品'; },
+      showOrder: '注文をお店の人に見せる', clear: 'クリア', spicy: '辛い', openMenu: 'メニュー翻訳',
+      tagNames: { pork: '豚肉', beef: '牛肉', chicken: '鶏肉', seafood: '魚介' },
+      papago: 'メニューが長いときは、Papagoのカメラで撮ればまとめて翻訳できます。',
+      noDish: '該当する料理がありません。',
       noPins: 'これらは街のどこでも食べられる料理なので、ピンはありません。リストで詳しく見られます。',
       mapNote: 'ピンはおおよその位置です。正確な道順はNAVERマップで。',
       tileFail: 'ここでは地図の背景を読み込めませんでした。ピンは使えます。',
@@ -475,6 +540,47 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
         { name: 'Papago', what: '韓国語に強い翻訳アプリ。メニューにカメラを向けるだけ。', url: 'https://papago.naver.com' },
         { name: 'Kakao T', what: '韓国人の多くが使うタクシーアプリ。' },
         { name: 'Olive Young Global', what: '帰国後も韓国コスメを買い直せます。', url: 'https://global.oliveyoung.com' }
+      ]
+    },
+    ko: {
+      heroA: '한국을,', heroB: '현지인처럼.',
+      heroP: '서울·부산·전주·경주에서 한국인이 진짜로 먹고, 마시고, 노는 곳.',
+      search: '장소, 음식, 동네 검색',
+      cities: '도시 고르기', picks: function (n) { return '로컬 추천 ' + n + '곳'; },
+      themes: '테마로 찾기',
+      swaps: '관광지 말고, 여기', swapsSub: '현지인은 이렇게 골라요',
+      buyTitle: '한국 오면 사야 할 것', buySub: '한국인이 실제로 사는 것과 사는 곳',
+      appsTitle: '한국에서 쓰는 앱', appsSub: '도착 전에 설치하세요',
+      back: '홈', all: '전체', list: '목록', mapTab: '지도',
+      locals: '현지인', tourists: '관광객',
+      hidden: '현지인 숨은 명소', fav: '현지인 인기', both: '모두에게 인기',
+      why: '현지인이 가는 이유', tips: '현지인 팁', insteadOf: '대신할 곳',
+      map: '네이버 지도에서 열기', staff: '직원에게 보여주기', copy: '한글 이름 복사', copied: '복사했어요',
+      close: '닫기', staffTop: '이 화면을 직원에게 보여주세요', details: '자세히 보기', open: '열기',
+      price: { '₩': '1만 원 이하', '₩₩': '1만~3만 원', '₩₩₩': '3만 원 이상', 'free': '무료' },
+      noResults: '검색 결과가 아직 없어요.',
+      results: function (n) { return n + '곳'; },
+      shopTips: '쇼핑 전에', shopTop: '추천 목록', whereIs: '어디 있어요?',
+      say: '한국인 후기', sayNaver: '네이버 블로그 후기', sayInsta: '인스타그램 게시물',
+      sayNote: '외국인 화면에서는 구글 번역을 거쳐 그 나라 말로 열려요. 한국어 화면에서는 원문이 열려요.',
+      sayOriginal: '원문',
+      noPins: '도시 어디서나 먹을 수 있는 음식이라 핀이 없어요. 목록에서 볼 수 있어요.',
+      mapNote: '핀은 대략적인 위치예요. 정확한 길은 네이버 지도로 확인하세요.',
+      tileFail: '여기서는 지도 배경을 불러오지 못했어요. 핀은 그대로 쓸 수 있어요.',
+      foot: '영업시간과 가격은 바뀔 수 있어요. 가기 전에 네이버 지도로 확인하세요.',
+      naverNote: '네이버 지도는 한국인이 쓰는 지도 앱이에요. 한국에서는 구글 지도 도보 길찾기가 제한돼요.',
+      menuTitle: '메뉴판 번역기', menuSub: '메뉴판의 한글을 찾아 +를 누르고, 주문서를 직원에게 보여주세요.',
+      menuPromoK: 'Menu translator', menuPromo: '메뉴판을 못 읽겠다면?', menuPromoSub: '한국 음식 51가지 설명. 주문서를 만들어 직원에게 보여줄 수 있어요.',
+      menuSearch: '검색: 비빔밥, 돼지고기, 면…', requests: '요청 추가', myOrder: function (n) { return n + '개 메뉴'; },
+      showOrder: '직원에게 주문 보여주기', clear: '비우기', spicy: '매운맛', openMenu: '메뉴판 번역기',
+      tagNames: { pork: '돼지고기', beef: '소고기', chicken: '닭고기', seafood: '해산물' },
+      papago: '메뉴가 길면 파파고 카메라로 찍어서 한 번에 번역할 수 있어요.',
+      noDish: '검색된 음식이 없어요.',
+      apps: [
+        { name: '네이버 지도', what: '길찾기, 지하철, 한국인 후기. 한국에선 구글 지도보다 훨씬 정확해요.', url: 'https://map.naver.com' },
+        { name: '파파고', what: '한국어에 강한 번역기. 메뉴판에 카메라를 대면 돼요.', url: 'https://papago.naver.com' },
+        { name: '카카오T', what: '한국인 대부분이 쓰는 택시 앱.' },
+        { name: '올리브영 글로벌', what: '귀국 후에도 한국 화장품을 다시 살 수 있어요.', url: 'https://global.oliveyoung.com' }
       ]
     }
   };
@@ -542,6 +648,14 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
         '<span>' + esc(t('tourists')) + '</span>' + dots(p.tourists, 't') +
       '</div></div>';
   }
+  /* 이름: 한국어 화면이면 한글 이름, 아니면 그 언어 이름 */
+  function nameOf(x) { return lang === 'ko' && typeof x.ko === 'string' ? x.ko : L(x.name); }
+  function subName(x) { return lang === 'ko' ? (x.name && x.name.en) || '' : x.ko; }
+  function translated(url) {
+    if (lang === 'ko') return url;
+    return 'https://translate.google.com/translate?sl=ko&tl=' + lang + '&hl=' + lang + '&u=' + encodeURIComponent(url);
+  }
+  function krTag(ko, style) { return lang === 'ko' ? '' : '<span class="kr"' + (style ? ' style="' + style + '"' : '') + '>' + esc(ko) + '</span>'; }
   function signWord(ko) { return ko.split(' ')[0].slice(0, 4); }
   function thumb(p) {
     if (p.photo && p.photo.src) {
@@ -552,7 +666,7 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
   }
   function heroPhoto(p) {
     if (p.photo && p.photo.src) {
-      return '<figure class="hero-photo"><img src="' + esc(p.photo.src) + '" alt="' + esc(L(p.name)) + '">' +
+      return '<figure class="hero-photo"><img src="' + esc(p.photo.src) + '" alt="' + esc(nameOf(p)) + '">' +
         (p.photo.credit ? '<figcaption>© ' + esc(p.photo.credit) + '</figcaption>' : '') + '</figure>';
     }
     return '<div class="hero-photo" aria-hidden="true"><span class="sign">' + esc(p.ko) + '</span></div>';
@@ -565,7 +679,7 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
     return '<button type="button" class="card" data-place="' + esc(p.id) + '" style="--city:' + cityColor(p.city) + '">' +
       thumb(p) +
       '<span class="card-body">' +
-        '<span class="card-top"><span><h3>' + esc(L(p.name)) + '</h3><span class="ko">' + esc(p.ko) + '</span></span>' +
+        '<span class="card-top"><span><h3>' + esc(nameOf(p)) + '</h3><span class="ko">' + esc(subName(p)) + '</span></span>' +
         '<span class="price">' + esc(p.price === 'free' ? t('price').free : p.price) + '</span></span>' +
         '<p class="why">' + esc(L(p.why)) + '</p>' +
         meter(p) +
@@ -581,6 +695,7 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
     var h = '<div class="view">';
     h += '<section class="hero"><h1>' + esc(t('heroA')) + '<br><em>' + esc(t('heroB')) + '</em></h1><p>' + esc(t('heroP')) + '</p></section>';
     h += '<div class="search">' + ICON_SEARCH + '<input id="q" type="search" autocomplete="off" placeholder="' + esc(t('search')) + '" aria-label="' + esc(t('search')) + '" value="' + esc(searchText) + '"></div>';
+    h += '<a class="promo" href="#menu"><div><span class="k">' + esc(t('menuPromoK')) + '</span><h3>' + esc(t('menuPromo')) + '</h3><p>' + esc(t('menuPromoSub')) + '</p></div><span class="go" aria-hidden="true">→</span></a>';
     h += '<div id="home-body">' + homeBody() + '</div>';
     return h + '</div>';
   }
@@ -593,7 +708,7 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
     D.cities.forEach(function (c) {
       h += '<a class="city" href="#' + c.id + '" style="--city:' + cityColor(c.id) + '">' +
         '<span class="stop" aria-hidden="true"></span>' +
-        '<h3>' + esc(L(c)) + '<span class="kr">' + esc(c.ko) + '</span></h3>' +
+        '<h3>' + esc(L(c)) + krTag(c.ko) + '</h3>' +
         '<p>' + esc(L(c.line)) + '</p>' +
         '<span class="count">' + esc(t('picks')(placesIn(c.id).length)) + '</span></a>';
     });
@@ -613,14 +728,14 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
         h += '<button type="button" class="swap" data-place="' + esc(p.id) + '">' +
           '<span class="from">' + esc(L(p.insteadOf)) + '</span>' +
           '<span class="arrow" aria-hidden="true">→</span>' +
-          '<span class="to">' + esc(L(p.name)) + '<small>' + esc(L(city(p.city))) + '</small></span></button>';
+          '<span class="to">' + esc(nameOf(p)) + '<small>' + esc(L(city(p.city))) + '</small></span></button>';
       });
       h += '</div></section>';
     }
 
     h += '<section class="sec"><div class="sec-head"><h2>' + esc(t('buyTitle')) + '</h2><span class="eyebrow">' + esc(t('buySub')) + '</span></div><div class="buy-grid">';
     D.shopping.groups.forEach(function (g) {
-      h += '<a class="buy" href="#shopping.' + g.id + '"><span class="k">' + esc(g.ko) + '</span><h3>' + esc(L(g.name)) + '</h3><p>' + esc(g.items.length + ' · ' + g.items.slice(0, 2).map(function (it) { return L(it.name); }).join(', ')) + '</p></a>';
+      h += '<a class="buy" href="#shopping.' + g.id + '"><span class="k">' + esc(lang === 'ko' ? L(g.name) : g.ko) + '</span><h3>' + esc(nameOf(g)) + '</h3><p>' + esc(g.items.length + ' · ' + g.items.slice(0, 2).map(function (it) { return nameOf(it); }).join(', ')) + '</p></a>';
     });
     h += '</div></section>';
 
@@ -638,7 +753,7 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
     var needle = q.toLowerCase();
     var hits = D.places.filter(function (p) {
       var c = city(p.city);
-      var hay = [p.ko, p.name.en, p.name.ja, p.area.en, p.area.ja, p.why.en, p.why.ja, c.en, c.ja, c.ko].join(' ').toLowerCase();
+      var hay = [p.ko, p.name.en, p.name.ja, p.area.ko, p.area.en, p.area.ja, p.why.ko, p.why.en, p.why.ja, c.en, c.ja, c.ko].join(' ').toLowerCase();
       return hay.indexOf(needle) !== -1;
     });
     if (!hits.length) return '<div class="empty">' + esc(t('noResults')) + '</div>';
@@ -652,7 +767,7 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
     var base = '#' + c.id + (mode === 'map' ? '.map' : '');
     var h = '<div class="view" style="--city:' + cityColor(c.id) + '">';
     h += '<a class="back" href="#">← ' + esc(t('back')) + '</a>';
-    h += '<section class="city-head"><span class="line-rule" aria-hidden="true"></span><h1>' + esc(L(c)) + '<span class="kr">' + esc(c.ko) + '</span></h1><p>' + esc(L(c.line)) + '</p></section>';
+    h += '<section class="city-head"><span class="line-rule" aria-hidden="true"></span><h1>' + esc(L(c)) + krTag(c.ko) + '</h1><p>' + esc(L(c.line)) + '</p></section>';
     h += '<div class="toolbar">';
     h += '<nav class="seg" aria-label="View">' +
       '<a href="#' + c.id + (catId ? '.' + catId : '') + '"' + (mode !== 'map' ? ' aria-current="page"' : '') + '>' + esc(t('list')) + '</a>' +
@@ -676,7 +791,7 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
   function viewTheme(k) {
     var h = '<div class="view">';
     h += '<a class="back" href="#">← ' + esc(t('back')) + '</a>';
-    h += '<section class="city-head" style="--city:var(--local)"><span class="line-rule" aria-hidden="true"></span><h1>' + esc(L(k)) + '<span class="kr">' + esc(k.ko) + '</span></h1></section>';
+    h += '<section class="city-head" style="--city:var(--local)"><span class="line-rule" aria-hidden="true"></span><h1>' + esc(L(k)) + krTag(k.ko) + '</h1></section>';
     h += '<nav class="chips" aria-label="' + esc(t('themes')) + '">';
     D.categories.forEach(function (x) {
       var n = placesIn(null, x.id).length;
@@ -686,7 +801,7 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
     D.cities.forEach(function (c) {
       var ps = placesIn(c.id, k.id);
       if (!ps.length) return;
-      h += '<h2 class="group-title" style="--city:' + cityColor(c.id) + '">' + esc(L(c)) + ' <span class="kr" style="font-weight:400;font-size:14px;color:var(--muted)">' + esc(c.ko) + '</span></h2>';
+      h += '<h2 class="group-title" style="--city:' + cityColor(c.id) + '">' + esc(L(c)) + ' ' + krTag(c.ko, 'font-weight:400;font-size:14px;color:var(--muted)') + '</h2>';
       h += ps.map(function (p) { return placeCard(p, false); }).join('');
     });
     return h + '</div></div>';
@@ -699,7 +814,7 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
     h += '<section class="city-head" style="--city:var(--tourist)"><span class="line-rule" aria-hidden="true"></span><h1>' + esc(t('buyTitle')) + '</h1><p>' + esc(t('buySub')) + '</p></section>';
     h += '<nav class="chips" aria-label="' + esc(t('buyTitle')) + '">';
     D.shopping.groups.forEach(function (x) {
-      h += '<a class="chip" href="#shopping.' + x.id + '"' + (x.id === g.id ? ' aria-current="page"' : '') + '>' + esc(L(x.name)) + ' <span class="kr n">' + esc(x.ko) + '</span></a>';
+      h += '<a class="chip" href="#shopping.' + x.id + '"' + (x.id === g.id ? ' aria-current="page"' : '') + '>' + esc(nameOf(x)) + (lang === 'ko' ? '' : ' <span class="kr n">' + esc(x.ko) + '</span>') + '</a>';
     });
     h += '</nav>';
     h += '<p style="margin:0">' + esc(L(g.intro)) + '</p>';
@@ -707,11 +822,118 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
       (L(g.tips) || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></section>';
     h += '<section class="sec"><h2 class="eyebrow">' + esc(t('shopTop')) + '</h2><div class="shop-list">';
     g.items.forEach(function (it, i) {
-      h += '<div class="shop"><div><h3>' + esc(L(it.name)) + ' <span class="kr">' + esc(it.ko) + '</span></h3><p>' + esc(L(it.why)) + '</p></div>' +
+      h += '<div class="shop"><div><h3>' + esc(nameOf(it)) + ' <span class="kr">' + esc(subName(it)) + '</span></h3><p>' + esc(L(it.why)) + '</p></div>' +
         '<button type="button" class="mini-btn" data-staff-shop="' + esc(g.id) + ':' + i + '">' + esc(t('staff')) + '</button></div>';
     });
     h += '</div></section>';
     return h + '</div>';
+  }
+
+  /* ── menu translator ── */
+  var order = {};      // 한글 메뉴 이름 → 수량
+  var reqOn = {};      // 요청 문장 번호 → 선택 여부
+  var menuQuery = '';
+
+  function allDishes() {
+    var out = [];
+    D.menu.groups.forEach(function (g) { g.items.forEach(function (it) { out.push(it); }); });
+    return out;
+  }
+  function dish(ko) { return allDishes().filter(function (d) { return d.ko === ko; })[0]; }
+  function orderCount() { return Object.keys(order).reduce(function (n, k) { return n + (order[k] > 0 ? 1 : 0); }, 0); }
+  function reqCount() { return Object.keys(reqOn).filter(function (k) { return reqOn[k]; }).length; }
+
+  function dishRow(d) {
+    var n = order[d.ko] || 0;
+    var tags = '';
+    if (d.spicy) tags += '<span class="tag-chip hot">' + esc(t('spicy')) + ' ' + '●●●'.slice(0, d.spicy) + '</span>';
+    (d.tags || []).forEach(function (tg) { tags += '<span class="tag-chip">' + esc(t('tagNames')[tg] || tg) + '</span>'; });
+    return '<div class="dish' + (n ? ' on' : '') + '" data-dish-row="' + esc(d.ko) + '">' +
+      '<div class="dish-ko" lang="ko">' + esc(d.ko) + '<small>' + esc(d.rom) + '</small></div>' +
+      '<div class="qty"><button type="button" data-qty="-1" data-dish="' + esc(d.ko) + '" aria-label="−1 ' + esc(L(d.name)) + '">−</button>' +
+        '<span data-qty-n="' + esc(d.ko) + '" aria-live="polite">' + n + '</span>' +
+        '<button type="button" data-qty="1" data-dish="' + esc(d.ko) + '" aria-label="+1 ' + esc(L(d.name)) + '">+</button></div>' +
+      '<div class="dish-main"><h3>' + esc(L(d.name)) + '</h3><p>' + esc(L(d.desc)) + '</p>' + (tags ? '<div class="tags">' + tags + '</div>' : '') + '</div>' +
+    '</div>';
+  }
+
+  function menuList(gid) {
+    var q = menuQuery.trim().toLowerCase();
+    if (q) {
+      var hits = allDishes().filter(function (d) {
+        var tagText = (d.tags || []).map(function (tg) { return [T.en.tagNames[tg], T.ja.tagNames[tg], T.ko.tagNames[tg]].join(' '); }).join(' ');
+        return [d.ko, d.rom, d.name.en, d.name.ja, d.desc.ko, d.desc.en, d.desc.ja, tagText].join(' ').toLowerCase().indexOf(q) !== -1;
+      });
+      return hits.length ? hits.map(dishRow).join('') : '<div class="empty">' + esc(t('noDish')) + '</div>';
+    }
+    var g = D.menu.groups.filter(function (x) { return x.id === gid; })[0] || D.menu.groups[0];
+    return g.items.map(dishRow).join('');
+  }
+
+  function viewMenu(gid) {
+    var g = D.menu.groups.filter(function (x) { return x.id === gid; })[0] || D.menu.groups[0];
+    var h = '<div class="view">';
+    h += '<a class="back" href="#">← ' + esc(t('back')) + '</a>';
+    h += '<section class="city-head" style="--city:var(--local)"><span class="line-rule" aria-hidden="true"></span><h1>' + esc(t('menuTitle')) + '</h1><p>' + esc(t('menuSub')) + '</p></section>';
+    h += '<div class="search">' + ICON_SEARCH + '<input id="mq" type="search" autocomplete="off" placeholder="' + esc(t('menuSearch')) + '" aria-label="' + esc(t('menuSearch')) + '" value="' + esc(menuQuery) + '"></div>';
+    h += '<nav class="chips" id="menu-chips" aria-label="' + esc(t('menuTitle')) + '"' + (menuQuery.trim() ? ' hidden' : '') + '>';
+    D.menu.groups.forEach(function (x) {
+      h += '<a class="chip" href="#menu.' + x.id + '"' + (x.id === g.id ? ' aria-current="page"' : '') + '>' + esc(lang === 'ko' ? x.ko : L(x)) + (lang === 'ko' ? '' : ' <span class="kr n">' + esc(x.ko) + '</span>') + '</a>';
+    });
+    h += '</nav>';
+    h += '<div class="dishes" id="dishes">' + menuList(g.id) + '</div>';
+    h += '<section class="sec"><h2 class="eyebrow">' + esc(t('requests')) + '</h2><div class="reqs">';
+    D.menu.requests.forEach(function (r, i) {
+      h += '<button type="button" class="req" data-req="' + i + '" aria-pressed="' + String(!!reqOn[i]) + '">' + esc(lang === 'ko' ? r.ko : L(r)) + '</button>';
+    });
+    h += '</div></section>';
+    h += '<p class="note">' + esc(t('papago')) + ' <a href="https://papago.naver.com" target="_blank" rel="noopener">Papago ↗</a></p>';
+    return h + '</div>';
+  }
+
+  function bindMenuSearch(gid) {
+    var q = document.getElementById('mq');
+    if (!q) return;
+    q.addEventListener('input', function () {
+      menuQuery = q.value;
+      document.getElementById('dishes').innerHTML = menuList(gid);
+      document.getElementById('menu-chips').hidden = !!menuQuery.trim();
+    });
+  }
+
+  function updateOrderBar() {
+    var bar = document.getElementById('orderbar');
+    var onMenu = (location.hash || '').replace(/^#/, '').split('.')[0] === 'menu';
+    var n = orderCount();
+    var show = onMenu && (n > 0 || reqCount() > 0);
+    bar.hidden = !show;
+    document.body.classList.toggle('has-orderbar', show);
+    if (!show) return;
+    bar.innerHTML = '<div class="orderbar-in">' +
+      '<button type="button" class="btn" data-order-clear>' + esc(t('clear')) + '</button>' +
+      '<button type="button" class="btn primary" data-order-show>' + esc(t('showOrder')) + (n ? ' · ' + esc(t('myOrder')(n)) : '') + '</button></div>';
+  }
+
+  function changeQty(ko, delta) {
+    var n = Math.max(0, Math.min(99, (order[ko] || 0) + delta));
+    if (n) order[ko] = n; else delete order[ko];
+    document.querySelectorAll('[data-qty-n="' + CSS.escape(ko) + '"]').forEach(function (el) { el.textContent = n; });
+    document.querySelectorAll('[data-dish-row="' + CSS.escape(ko) + '"]').forEach(function (el) { el.classList.toggle('on', n > 0); });
+    updateOrderBar();
+  }
+
+  function openOrderSlip() {
+    var keys = Object.keys(order).filter(function (k) { return order[k] > 0; });
+    var reqs = D.menu.requests.filter(function (r, i) { return reqOn[i]; });
+    var lines = keys.map(function (k) { var d = dish(k); return '<div><span>' + esc(k) + '</span><b>' + order[k] + esc(d.unit) + '</b></div>'; }).join('');
+    var meanLang = lang === 'ko' ? 'en' : lang;
+    var mean = keys.map(function (k) { var d = dish(k); return '<div>' + esc(d.name[meanLang] || d.name.en) + ' × ' + order[k] + '</div>'; }).join('') +
+      reqs.map(function (r) { return '<div>' + esc(r[meanLang] || r.en) + '</div>'; }).join('');
+    var html =
+      (keys.length ? '<div class="order-lines" lang="ko">' + lines + '</div><div class="big" lang="ko" style="font-size:22px">주세요. 감사합니다!</div>' : '') +
+      (reqs.length ? '<div class="order-reqs" lang="ko">' + reqs.map(function (r) { return '<div>' + esc(r.ko) + '</div>'; }).join('') + '</div>' : '') +
+      '<div class="mean order-mean">' + mean + '</div>';
+    openStaffRaw('이렇게 주문할게요 🙏', html);
   }
 
   /* ── map (Leaflet) ── */
@@ -746,9 +968,9 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
         html: '<div class="lp-pin" style="--pc:' + cityColor(p.city) + '"><span></span></div>',
         iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -24]
       });
-      window.L.marker([p.lat, p.lng], { icon: icon, title: L(p.name), alt: L(p.name) })
+      window.L.marker([p.lat, p.lng], { icon: icon, title: nameOf(p), alt: nameOf(p) })
         .addTo(mapInst)
-        .bindPopup('<div class="pop"><span class="eyebrow">' + esc(L(cat(p.cat))) + '</span><strong>' + esc(L(p.name)) + '</strong><span class="ko">' + esc(p.ko) + '</span>' +
+        .bindPopup('<div class="pop"><span class="eyebrow">' + esc(L(cat(p.cat))) + '</span><strong>' + esc(nameOf(p)) + '</strong><span class="ko">' + esc(subName(p)) + '</span>' +
           '<button type="button" data-place="' + esc(p.id) + '">' + esc(t('details')) + '</button></div>');
       bounds.push([p.lat, p.lng]);
     });
@@ -774,6 +996,10 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
     } else if (parts[0] === 'all' && cat(parts[1])) {
       app.innerHTML = viewTheme(cat(parts[1]));
       document.title = L(cat(parts[1])) + ' · LocalPick Korea';
+    } else if (parts[0] === 'menu') {
+      app.innerHTML = viewMenu(parts[1]);
+      document.title = t('menuTitle') + ' · LocalPick Korea';
+      bindMenuSearch(parts[1]);
     } else if (parts[0] === 'shopping') {
       app.innerHTML = viewShopping(parts[1]);
       document.title = t('buyTitle') + ' · LocalPick Korea';
@@ -783,6 +1009,7 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
       bindSearch();
     }
     document.getElementById('foot').textContent = t('foot');
+    updateOrderBar();
   }
 
   function bindSearch() {
@@ -807,7 +1034,7 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
     var c = city(p.city);
     var h = '<div class="grab" aria-hidden="true"></div>';
     h += '<div class="sheet-head" style="--city:' + cityColor(p.city) + '"><div><span class="eyebrow" style="color:var(--city)">' + esc(L(c)) + ' · ' + esc(L(cat(p.cat))) + '</span>' +
-      '<h2 id="sheet-title">' + esc(L(p.name)) + '</h2><div class="ko-big">' + esc(p.ko) + '</div></div>' +
+      '<h2 id="sheet-title">' + esc(nameOf(p)) + '</h2><div class="ko-big">' + esc(subName(p)) + '</div></div>' +
       '<button type="button" class="x" data-close aria-label="' + esc(t('close')) + '">×</button></div>';
     h += '<div style="--city:' + cityColor(p.city) + '">' + heroPhoto(p) + '</div>';
     h += '<div class="sub"><span>' + esc(L(p.area)) + '</span><span class="price">' + esc(t('price')[p.price] || p.price) + '</span></div>';
@@ -822,9 +1049,11 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
       '<button type="button" class="btn" data-copy="' + esc(p.ko) + '">' + esc(t('copy')) + '</button>' +
     '</div>';
     h += '<div class="say"><h4>' + esc(t('say')) + '</h4><div class="links">' +
-      '<a class="mini-btn" href="' + esc(blogUrl(p.map || p.ko)) + '" target="_blank" rel="noopener">' + esc(t('sayNaver')) + ' ↗</a>' +
+      '<a class="mini-btn" href="' + esc(translated(blogUrl(p.map || p.ko))) + '" target="_blank" rel="noopener">' + esc(t('sayNaver')) + ' ↗</a>' +
+      (lang === 'ko' ? '' : '<a class="mini-btn" href="' + esc(blogUrl(p.map || p.ko)) + '" target="_blank" rel="noopener">' + esc(t('sayOriginal')) + ' ↗</a>') +
       '<a class="mini-btn" href="' + esc(instaUrl(p.ko)) + '" target="_blank" rel="noopener">' + esc(t('sayInsta')) + ' ↗</a>' +
       '</div><p class="note">' + esc(t('sayNote')) + '</p></div>';
+    if (p.cat === 'eat' || p.cat === 'musteat') h += '<a class="promo" href="#menu"><div><span class="k">' + esc(t('menuPromoK')) + '</span><h3>' + esc(t('menuPromo')) + '</h3></div><span class="go" aria-hidden="true">→</span></a>';
     h += '<p class="note">' + esc(t('naverNote')) + '</p>';
 
     var sheet = document.getElementById('sheet');
@@ -845,16 +1074,17 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
 
   /* ── show-to-staff screen ── */
   function openStaff(korean, meaning, placeKo) {
+    openStaffRaw('사장님, 이거 봐 주세요 🙏',
+      (placeKo ? '<div class="place" lang="ko">' + esc(placeKo) + '</div>' : '') +
+      '<div class="big" lang="ko">' + esc(korean) + '</div>' +
+      '<div class="mean">' + esc(meaning) + '</div>');
+  }
+  function openStaffRaw(greeting, inner) {
     var el = document.getElementById('staff');
     el.innerHTML =
       '<div class="staff-top"><span class="eyebrow">' + esc(t('staffTop')) + '</span>' +
       '<button type="button" class="x" data-staff-close aria-label="' + esc(t('close')) + '">×</button></div>' +
-      '<div class="slip">' +
-        '<div class="to-staff" lang="ko">사장님, 이거 봐 주세요 🙏</div>' +
-        (placeKo ? '<div class="place" lang="ko">' + esc(placeKo) + '</div>' : '') +
-        '<div class="big" lang="ko">' + esc(korean) + '</div>' +
-        '<div class="mean">' + esc(meaning) + '</div>' +
-      '</div><div></div>';
+      '<div class="slip"><div class="to-staff" lang="ko">' + esc(greeting) + '</div>' + inner + '</div><div></div>';
     el.hidden = false;
     var x = el.querySelector('[data-staff-close]');
     if (x) x.focus();
@@ -889,7 +1119,7 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
 
   /* ── events ── */
   document.addEventListener('click', function (e) {
-    var el = e.target.closest('[data-lang],[data-place],[data-close],[data-staff-place],[data-staff-shop],[data-staff-close],[data-copy]');
+    var el = e.target.closest('[data-lang],[data-place],[data-close],[data-staff-place],[data-staff-shop],[data-staff-close],[data-copy],[data-qty],[data-req],[data-order-show],[data-order-clear]');
     if (!el) {
       if (e.target.id === 'sheet-scrim') closeSheet();
       return;
@@ -900,16 +1130,28 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
     if (el.hasAttribute('data-staff-close')) return closeStaff();
     if (el.dataset.staffPlace) {
       var p = place(el.dataset.staffPlace);
-      return openStaff(p.order.ko, L(p.order), p.ko);
+      return openStaff(p.order.ko, lang === 'ko' ? p.order.en : L(p.order), p.ko);
     }
     if (el.dataset.staffShop) {
       var ref = el.dataset.staffShop.split(':');
       var g = group(ref[0]);
       var it = g && g.items[+ref[1]];
-      if (it) return openStaff(it.ko + ' 어디 있어요?', L(it.name) + ' · ' + t('whereIs'), g.ko);
+      if (it) return openStaff(it.ko + ' 어디 있어요?', (lang === 'ko' ? it.name.en + ' · Where is this?' : L(it.name) + ' · ' + t('whereIs')), g.ko);
       return;
     }
     if (el.dataset.copy) return copyText(el.dataset.copy, el);
+    if (el.dataset.qty) return changeQty(el.dataset.dish, +el.dataset.qty);
+    if (el.dataset.req != null) {
+      var i = +el.dataset.req;
+      reqOn[i] = !reqOn[i];
+      el.setAttribute('aria-pressed', String(!!reqOn[i]));
+      return updateOrderBar();
+    }
+    if (el.hasAttribute('data-order-show')) return openOrderSlip();
+    if (el.hasAttribute('data-order-clear')) {
+      order = {}; reqOn = {};
+      return render();
+    }
   });
 
   document.addEventListener('keydown', function (e) {
@@ -921,6 +1163,7 @@ footer { max-width: 560px; margin: 0 auto; padding: 0 16px; padding-block: 0 40p
   window.addEventListener('hashchange', function () {
     if (openPlaceId) closeSheet();
     searchText = '';
+    menuQuery = '';
     render();
     window.scrollTo(0, 0);
   });
