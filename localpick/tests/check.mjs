@@ -16,4 +16,15 @@ check('24 shopping items',()=>assert.equal(D.shopping.groups.flatMap(g=>g.items)
 check('local script/style assets exist',()=>{for(const m of html.matchAll(/(?:src|href)="([^"#]+\.(?:js|css))"/g)){if(!m[1].startsWith('http'))assert(fs.existsSync(path.join(root,m[1])),m[1]);}});
 check('sample data is disclosed and unmeasured popularity is not rendered',()=>{assert(html.includes('id="data-notice"'));const meter=html.slice(html.indexOf('  function meter(p) {'),html.indexOf('  /* 이름:'));assert(!meter.includes('p.locals'));assert(meter.includes('samplePlace'));});
 check('no secret-shaped literals in authored source',()=>assert(!/(?:sk-[A-Za-z0-9]{30,}|ghp_[A-Za-z0-9]{30,}|BEGIN (?:RSA |OPENSSH )?PRIVATE KEY)/.test(html+data)));
+check('partial OCR matches cannot add the wrong dish to an order',()=>{
+  const start=html.indexOf('  function dishRow('), end=html.indexOf('  function menuList(',start);
+  assert(start>=0 && end>start);
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const env={order:{},esc,L:x=>x.en,t:k=>k==='tagNames'?{}:k};
+  vm.createContext(env); vm.runInContext(html.slice(start,end),env);
+  const d=D.menu.groups.flatMap(g=>g.items).find(d=>d.ko==='돼지갈비');
+  const partial=env.dishRow(d,'12,000','돼지갈비찜 <img>');
+  assert(!partial.includes('data-qty=')); assert(partial.includes('돼지갈비찜 &lt;img&gt;'));
+  assert(env.dishRow(d,'12,000','').includes('data-qty="1"'));
+});
 console.log(JSON.stringify({checks,places:D.places.length,dishes:51,shopping:24}));
