@@ -16,7 +16,14 @@
 - 스크린샷·테스트 로그는 검토 체크아웃의 artifacts/에 보관.
 
 ## 배포
-Sites 비공개 배포 준비 완료. 실제 배포 ID·URL·접근 확인은 artifacts/deployment-receipt.json을 확인한다. 성공 응답 전에는 배포 완료로 판단하지 않는다.
+Sites 버전 1 배포 `succeeded`, 2026-10-02 10:44 KST.
+- URL: https://localpick-korea.jyb1126.chatgpt.site
+- 배포 소스 SHA: `5595c1e81b8a44c8e26671b4bfaa25082d5f6ecf` (별도 Sites 저장소).
+- 배포 ID: `appgdep_6abf0c57c1408191981218d38d2b5293`.
+- 접근 read-back: custom, 소유자 1명, 추가 편집자·그룹·외부 방문자 0.
+- 수정 전달: https://github.com/dudqks0319-cpu/-/pull/2 (초안, Claude 브랜치 대상).
+- 로컬 영수증: artifacts/deployment-receipt.json. 배포 성공과 로컬 브라우저 기능 확인은 각각 별도 증거다. 실제 배포 주소에서 OCR 실행·로그인 후 화면은 아직 직접 검증하지 않았다.
+- 사이트 정적 폴더는 `dist/`. 첫 포장 시 미지원 `public/` 이름을 수정한 뒤 공식 도구로 포장·푸시·배포했다.
 
 ## 남은 범위
 실제 휴대폰 카메라/HEIC/저사양 기기, 장소 출처·가격·의약품/알레르기 설명 검수, 저장·일정·키보드 접근성. REVIEW.md 우선순위 참고. 현재 기능은 정적이므로 DB·유료 API·사진 업로드 서버는 활성화하지 않았다.
